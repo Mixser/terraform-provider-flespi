@@ -95,7 +95,7 @@ func (p *flespiProvider) Configure(ctx context.Context, req provider.ConfigureRe
 
 func (p *flespiProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewCdnResource, NewLimitResource, NewSubaccountResource,
+		NewLimitResource, NewSubaccountResource,
 	}
 }
 
