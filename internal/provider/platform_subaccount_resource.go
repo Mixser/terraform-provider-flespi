@@ -170,8 +170,25 @@ func (p *platformSubaccountResource) Update(ctx context.Context, request resourc
 }
 
 func (p *platformSubaccountResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
-	//TODO implement me
-	panic("implement me")
+	var state subaccountResourceModel
+
+	diags := request.State.Get(ctx, &state)
+
+	response.Diagnostics.Append(diags...)
+
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	err := p.client.DeleteSubaccount(state.Id.ValueInt64())
+
+	if err != nil {
+		response.Diagnostics.AddError(
+			"Error Deleting Flespi Subaccount",
+			"Could not delete subaccount, unexpected error: "+err.Error(),
+		)
+		return
+	}
 }
 
 func (p *platformSubaccountResource) convertFlespiSubaccountToResourceModel(subaccount *flespi.Subaccount) *subaccountResourceModel {

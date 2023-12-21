@@ -457,7 +457,25 @@ func (p *platformLimitResource) Update(ctx context.Context, request resource.Upd
 
 func (p *platformLimitResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
 	//TODO implement me
-	panic("implement me")
+	var state limitResourceModel
+
+	diags := request.State.Get(ctx, &state)
+
+	response.Diagnostics.Append(diags...)
+
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	err := p.client.DeleteLimit(state.Id.ValueInt64())
+
+	if err != nil {
+		response.Diagnostics.AddError(
+			"Error Deleting Flespi Limit",
+			"Could not delete limit, unexpected error: "+err.Error(),
+		)
+		return
+	}
 }
 
 func (p *platformLimitResource) convertFlespiLimitToResourceModel(limit *flespi.Limit) *limitResourceModel {
