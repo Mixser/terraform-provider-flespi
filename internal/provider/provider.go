@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"terraform-provider-flespi/internal/provider/resources/gateway"
+	"terraform-provider-flespi/internal/provider/resources/platform"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -95,7 +97,11 @@ func (p *flespiProvider) Configure(ctx context.Context, req provider.ConfigureRe
 
 func (p *flespiProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewLimitResource, NewSubaccountResource, NewWebhookResource,
+		platform.NewLimitResource,
+		platform.NewSubaccountResource,
+		platform.NewWebhookResource,
+		gateway.NewDeviceResource,
+		gateway.NewChannelResource,
 	}
 }
 

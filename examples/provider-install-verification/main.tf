@@ -15,6 +15,8 @@ resource "flespi_limit" "edu" {
   name           = "name of the limit"
   webhooks_count = 23
   cdn_storage    = 12
+
+  tokens_count = 5
 }
 
 resource "flespi_subaccount" "mitu" {
@@ -49,4 +51,31 @@ resource "flespi_webhook" "nimbus" {
       ]
     },
   ]
+}
+
+
+resource "flespi_device" "iphone" {
+  name = "iPhone 📱"
+  enabled = false
+
+  device_type_id = 1
+
+  media_ttl = 86401
+  messages_ttl = 86400
+
+  configuration = {
+    ident = 123456789123456
+    settings_polling = "once"
+  }
+}
+
+resource "flespi_channel" "test_channel" {
+  name = "Test Channel"
+  enabled = false
+
+  protocol_name = "test"
+
+  configuration = {
+    timeout = 120
+  }
 }

@@ -1,4 +1,4 @@
-package provider
+package platform
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/mixser/flespi-client"
+	flespi_webhook "github.com/mixser/flespi-client/resources/platform/webhook"
 )
 
 var (
@@ -183,7 +184,27 @@ func (p platformWebhookResource) Create(ctx context.Context, request resource.Cr
 
 	newWebhookInstance := convertWebhookResourceModelToFlespiWebhook(*data)
 
-	webhookInstance, err := p.client.NewWebhook(newWebhookInstance)
+	var webhookInstance flespi_webhook.Webhook
+	var err error
+
+	switch newWebhookInstance.(type) {
+	case *flespi_webhook.SingleWebhook:
+		webhook := *newWebhookInstance.(*flespi_webhook.SingleWebhook)
+		webhookInstance, err = flespi_webhook.NewSignleWebhook(
+			p.client,
+			webhook.Name,
+			flespi_webhook.SWWithTriggers(webhook.Triggers),
+			flespi_webhook.SWWithConfiguration(webhook.Configuration),
+		)
+	case *flespi_webhook.ChainedWebhook:
+		webhook := *newWebhookInstance.(*flespi_webhook.ChainedWebhook)
+		webhookInstance, err = flespi_webhook.NewChainedWebhook(
+			p.client,
+			webhook.Name,
+			flespi_webhook.CWWithTriggers(webhook.Triggers),
+			flespi_webhook.CWWithConfigurations(webhook.Configuration),
+		)
+	}
 
 	if err != nil {
 		tflog.Error(ctx, fmt.Sprintf("%s", err))
@@ -205,7 +226,7 @@ func (p platformWebhookResource) Read(ctx context.Context, request resource.Read
 		return
 	}
 
-	webhook, err := p.client.GetWebhook(state.Id.ValueInt64())
+	webhook, err := flespi_webhook.GetWebhook(p.client, state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -242,7 +263,7 @@ func (p platformWebhookResource) Update(ctx context.Context, request resource.Up
 
 	webhook := convertWebhookResourceModelToFlespiWebhook(plan)
 
-	_, err := p.client.UpdateWebhook(webhookId, webhook)
+	_, err := flespi_webhook.UpdateWebhook(p.client, webhook)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -252,7 +273,7 @@ func (p platformWebhookResource) Update(ctx context.Context, request resource.Up
 		return
 	}
 
-	updatedWebhook, err := p.client.GetWebhook(webhookId)
+	updatedWebhook, err := flespi_webhook.GetWebhook(p.client, webhookId)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -280,7 +301,7 @@ func (p platformWebhookResource) Delete(ctx context.Context, request resource.De
 		return
 	}
 
-	err := p.client.DeleteWebhook(state.Id.ValueInt64())
+	err := flespi_webhook.DeleteWebhookById(p.client, state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -291,18 +312,18 @@ func (p platformWebhookResource) Delete(ctx context.Context, request resource.De
 	}
 }
 
-func convertFlespiWebhookToResourceModel(webhook flespi.Webhook) *webhookResourceModel {
+func convertFlespiWebhookToResourceModel(webhook flespi_webhook.Webhook) *webhookResourceModel {
 	switch v := webhook.(type) {
-	case *flespi.SingleWebhook:
+	case *flespi_webhook.SingleWebhook:
 		return convertFlespiSingleWebhookToResourceModel(v)
-	case *flespi.ChainedWebhook:
+	case *flespi_webhook.ChainedWebhook:
 		return convertFlespiChainedWebhookToResourceModel(v)
 	default:
 		panic(fmt.Sprintf("Unknown type: %T", webhook))
 	}
 }
 
-func convertFlespiSingleWebhookToResourceModel(webhook *flespi.SingleWebhook) *webhookResourceModel {
+func convertFlespiSingleWebhookToResourceModel(webhook *flespi_webhook.SingleWebhook) *webhookResourceModel {
 	var result = webhookResourceModel{
 		Id:             types.Int64Value(webhook.Id),
 		Name:           types.StringValue(webhook.Name),
@@ -314,7 +335,7 @@ func convertFlespiSingleWebhookToResourceModel(webhook *flespi.SingleWebhook) *w
 	return &result
 }
 
-func convertFlespiChainedWebhookToResourceModel(webhook *flespi.ChainedWebhook) *webhookResourceModel {
+func convertFlespiChainedWebhookToResourceModel(webhook *flespi_webhook.ChainedWebhook) *webhookResourceModel {
 	var result = webhookResourceModel{
 		Id:       types.Int64Value(webhook.Id),
 		Type:     types.StringValue("chained-webhook"),
@@ -329,7 +350,7 @@ func convertFlespiChainedWebhookToResourceModel(webhook *flespi.ChainedWebhook) 
 	return &result
 }
 
-func convertFlespiTriggerToResourceModel(triggers []flespi.Trigger) []triggerModel {
+func convertFlespiTriggerToResourceModel(triggers []flespi_webhook.Trigger) []triggerModel {
 	var result = []triggerModel{}
 
 	for _, trigger := range triggers {
@@ -341,7 +362,7 @@ func convertFlespiTriggerToResourceModel(triggers []flespi.Trigger) []triggerMod
 	return result
 }
 
-func convertFlespiTriggerFilterToResourceModel(filter *flespi.TriggerFilter) *filterModel {
+func convertFlespiTriggerFilterToResourceModel(filter *flespi_webhook.TriggerFilter) *filterModel {
 	if filter == nil {
 		return nil
 	}
@@ -352,18 +373,18 @@ func convertFlespiTriggerFilterToResourceModel(filter *flespi.TriggerFilter) *fi
 	}
 }
 
-func convertFlespiConfigurationToResourceModel(configuration flespi.Configuration) configurationModel {
+func convertFlespiConfigurationToResourceModel(configuration flespi_webhook.Configuration) configurationModel {
 	switch v := configuration.(type) {
-	case flespi.CustomServerConfiguration:
+	case flespi_webhook.CustomServerConfiguration:
 		return convertFlespiCustomServiceConfigurationToResourceModel(&v)
-	case flespi.FlespiConfiguration:
+	case flespi_webhook.FlespiConfiguration:
 		return convertFlespiFlespiConfigurationToResourceModel(&v)
 	default:
 		panic(fmt.Sprintf("Unknown type: %T", configuration))
 	}
 }
 
-func convertFlespiCustomServiceConfigurationToResourceModel(cfg *flespi.CustomServerConfiguration) configurationModel {
+func convertFlespiCustomServiceConfigurationToResourceModel(cfg *flespi_webhook.CustomServerConfiguration) configurationModel {
 	var result = configurationModel{
 		Type:     types.StringValue(cfg.Type),
 		Uri:      types.StringValue(cfg.Uri),
@@ -381,18 +402,18 @@ func convertFlespiCustomServiceConfigurationToResourceModel(cfg *flespi.CustomSe
 	return result
 }
 
-func convertFlespiFlespiConfigurationToResourceModel(cfg *flespi.FlespiConfiguration) configurationModel {
+func convertFlespiFlespiConfigurationToResourceModel(cfg *flespi_webhook.FlespiConfiguration) configurationModel {
 	return configurationModel{}
 }
 
-func convertFlespiHeaderToResourceModel(flespiHeader flespi.Header) header {
+func convertFlespiHeaderToResourceModel(flespiHeader flespi_webhook.Header) header {
 	return header{
 		Name:  types.StringValue(flespiHeader.Name),
 		Value: types.StringValue(flespiHeader.Value),
 	}
 }
 
-func convertFlespiValidatorToResourceModel(v *flespi.Validator) *validator {
+func convertFlespiValidatorToResourceModel(v *flespi_webhook.Validator) *validator {
 	if v == nil {
 		return nil
 	}
@@ -403,19 +424,19 @@ func convertFlespiValidatorToResourceModel(v *flespi.Validator) *validator {
 	}
 }
 
-func convertWebhookResourceModelToFlespiWebhook(data webhookResourceModel) flespi.Webhook {
-	var result flespi.Webhook
+func convertWebhookResourceModelToFlespiWebhook(data webhookResourceModel) flespi_webhook.Webhook {
+	var result flespi_webhook.Webhook
 
 	switch data.Type.ValueString() {
 	case "single-webhook":
-		result = &flespi.SingleWebhook{
+		result = &flespi_webhook.SingleWebhook{
 			Id:            data.Id.ValueInt64(),
 			Name:          data.Name.ValueString(),
 			Triggers:      convertTriggersToFlespiTriggers(data.Triggers),
 			Configuration: convertConfigurationResourceModelToFlespiConfiguration(data.Configurations[0]),
 		}
 	case "chained-webhool":
-		result = &flespi.ChainedWebhook{
+		result = &flespi_webhook.ChainedWebhook{
 			Id:            data.Id.ValueInt64(),
 			Name:          data.Name.ValueString(),
 			Triggers:      convertTriggersToFlespiTriggers(data.Triggers),
@@ -428,8 +449,8 @@ func convertWebhookResourceModelToFlespiWebhook(data webhookResourceModel) flesp
 	return result
 }
 
-func convertConfigurationsToFlespiConfigurations(cfgs []configurationModel) []flespi.Configuration {
-	var result []flespi.Configuration
+func convertConfigurationsToFlespiConfigurations(cfgs []configurationModel) []flespi_webhook.Configuration {
+	var result []flespi_webhook.Configuration
 
 	for _, cfg := range cfgs {
 		result = append(result, convertConfigurationResourceModelToFlespiConfiguration(cfg))
@@ -438,12 +459,12 @@ func convertConfigurationsToFlespiConfigurations(cfgs []configurationModel) []fl
 	return result
 }
 
-func convertConfigurationResourceModelToFlespiConfiguration(cfg configurationModel) flespi.Configuration {
-	var result flespi.Configuration
+func convertConfigurationResourceModelToFlespiConfiguration(cfg configurationModel) flespi_webhook.Configuration {
+	var result flespi_webhook.Configuration
 
 	switch cfg.Type.ValueString() {
 	case "custom-server":
-		result = &flespi.CustomServerConfiguration{
+		result = &flespi_webhook.CustomServerConfiguration{
 			Type:     cfg.Type.ValueString(),
 			Uri:      cfg.Uri.ValueString(),
 			Method:   cfg.Method.ValueString(),
@@ -453,7 +474,7 @@ func convertConfigurationResourceModelToFlespiConfiguration(cfg configurationMod
 			Validate: convertValidatorResourceModelToFlespiValidator(cfg.Validate),
 		}
 	case "flespi-platform":
-		result = &flespi.FlespiConfiguration{
+		result = &flespi_webhook.FlespiConfiguration{
 			Type:     cfg.Type.ValueString(),
 			Uri:      cfg.Uri.ValueString(),
 			Method:   cfg.Method.ValueString(),
@@ -466,8 +487,8 @@ func convertConfigurationResourceModelToFlespiConfiguration(cfg configurationMod
 	return result
 }
 
-func convertHeaderstoFlespiHeaders(hs []header) []flespi.Header {
-	var result []flespi.Header
+func convertHeaderstoFlespiHeaders(hs []header) []flespi_webhook.Header {
+	var result []flespi_webhook.Header
 
 	for _, h := range hs {
 		result = append(result, convertHeaderResourceModelToFlespiHeader(h))
@@ -476,35 +497,35 @@ func convertHeaderstoFlespiHeaders(hs []header) []flespi.Header {
 	return result
 }
 
-func convertHeaderResourceModelToFlespiHeader(h header) flespi.Header {
-	return flespi.Header{
+func convertHeaderResourceModelToFlespiHeader(h header) flespi_webhook.Header {
+	return flespi_webhook.Header{
 		Name:  h.Name.ValueString(),
 		Value: h.Value.ValueString(),
 	}
 }
 
-func convertValidatorResourceModelToFlespiValidator(v *validator) *flespi.Validator {
+func convertValidatorResourceModelToFlespiValidator(v *validator) *flespi_webhook.Validator {
 	if v == nil {
 		return nil
 	}
 
-	return &flespi.Validator{
+	return &flespi_webhook.Validator{
 		Expression: v.Expression.ValueString(),
 		Action:     v.Action.ValueString(),
 	}
 }
 
-func convertTriggersToFlespiTriggers(ts []triggerModel) []flespi.Trigger {
-	var result []flespi.Trigger
+func convertTriggersToFlespiTriggers(ts []triggerModel) []flespi_webhook.Trigger {
+	var result []flespi_webhook.Trigger
 
 	for _, t := range ts {
 
-		trigger := flespi.Trigger{
+		trigger := flespi_webhook.Trigger{
 			Topic: t.Topic.ValueString(),
 		}
 
 		if t.Filter != nil {
-			trigger.Filter = &flespi.TriggerFilter{
+			trigger.Filter = &flespi_webhook.TriggerFilter{
 				CID:     t.Filter.CID.ValueInt64(),
 				Payload: t.Filter.Payload.ValueString(),
 			}

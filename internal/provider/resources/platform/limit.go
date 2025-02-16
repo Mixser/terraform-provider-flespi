@@ -1,4 +1,4 @@
-package provider
+package platform
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/mixser/flespi-client"
+	flespi_limit "github.com/mixser/flespi-client/resources/platform/limit"
 )
 
 var (
@@ -370,9 +371,60 @@ func (p *platformLimitResource) Create(ctx context.Context, request resource.Cre
 		return
 	}
 
-	newLimitInstance := p.convertResourceModelToFlespiLimit(*data)
+	instance := p.convertResourceModelToFlespiLimit(*data)
 
-	limitInstance, err := p.client.NewLimit(newLimitInstance)
+	limitInstance, err := flespi_limit.NewLimit(
+		p.client,
+		instance.Name,
+		flespi_limit.WithDescription(instance.Description),
+		flespi_limit.WithBlockingDurationLimit(instance.BlockingDuration),
+		flespi_limit.WithApiLimit(instance.ApiCall, instance.ApiTraffic),
+		flespi_limit.WithChannelLimit(
+			instance.ChannelsCount,
+			instance.ChannelMessages,
+			instance.ChannelStorage,
+			instance.ChannelTraffic,
+			instance.ChannelConnections,
+		),
+		flespi_limit.WithContainerLimit(
+			instance.ContainersCount,
+			instance.ContainerStorage,
+		),
+		flespi_limit.WithCdnLimit(
+			instance.CdnsCount,
+			instance.CdnStorage,
+			instance.CdnTraffic,
+		),
+		flespi_limit.WithDeviceLimit(
+			instance.DevicesCount,
+			instance.DeviceStorage,
+			instance.DeviceMediaTraffic,
+			instance.DeviceMediaStorage,
+		),
+		flespi_limit.WithStreamLimit(
+			instance.StreamsCount,
+			instance.StreamStorage,
+			instance.StreamTraffic,
+		),
+		flespi_limit.WithModemLimit(instance.ModemsCount),
+		flespi_limit.WithMqttLimit(
+			instance.MqttSessions,
+			instance.MqttMessages,
+			instance.MqttSessionStorage,
+			instance.MqttRetainedStorage,
+			instance.MqttSubscriptions,
+		),
+		flespi_limit.WithSmsLimit(instance.SmsCount),
+		flespi_limit.WithTokenLimit(instance.TokensCount),
+		flespi_limit.WithLimitLimit(instance.LimitsCount),
+		flespi_limit.WithRealmLimit(instance.RealmsCount),
+		flespi_limit.WithCalcLimit(instance.CalcsCount, instance.CalcsStorage),
+		flespi_limit.WithPluginLimit(instance.PluginsCount, instance.PluginTraffic, instance.PluginBufferedMessages),
+		flespi_limit.WithGroupLimit(instance.GroupsCount),
+		flespi_limit.WithWebhookLimit(instance.WebhooksCount, instance.WebhookStorage, instance.WebhookTraffic),
+		flespi_limit.WithGrantLimit(instance.GrantsCount),
+		flespi_limit.WithIdentityProviderLimit(instance.IdentityProvidersCount),
+	)
 
 	if err != nil {
 		tflog.Error(ctx, fmt.Sprintf("%s", err))
@@ -394,7 +446,7 @@ func (p *platformLimitResource) Read(ctx context.Context, request resource.ReadR
 		return
 	}
 
-	limit, err := p.client.GetLimit(state.Id.ValueInt64())
+	limit, err := flespi_limit.GetLimit(p.client, state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -427,7 +479,7 @@ func (p *platformLimitResource) Update(ctx context.Context, request resource.Upd
 
 	var limit = p.convertResourceModelToFlespiLimit(plan)
 
-	_, err := p.client.UpdateLimit(plan.Id.ValueInt64(), limit)
+	_, err := flespi_limit.UpdateLimit(p.client, limit)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -437,7 +489,7 @@ func (p *platformLimitResource) Update(ctx context.Context, request resource.Upd
 		return
 	}
 
-	updatedLimit, err := p.client.GetLimit(plan.Id.ValueInt64())
+	updatedLimit, err := flespi_limit.GetLimit(p.client, plan.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -456,7 +508,6 @@ func (p *platformLimitResource) Update(ctx context.Context, request resource.Upd
 }
 
 func (p *platformLimitResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
-	//TODO implement me
 	var state limitResourceModel
 
 	diags := request.State.Get(ctx, &state)
@@ -467,7 +518,7 @@ func (p *platformLimitResource) Delete(ctx context.Context, request resource.Del
 		return
 	}
 
-	err := p.client.DeleteLimit(state.Id.ValueInt64())
+	err := flespi_limit.DeleteLimitById(p.client, state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -478,7 +529,7 @@ func (p *platformLimitResource) Delete(ctx context.Context, request resource.Del
 	}
 }
 
-func (p *platformLimitResource) convertFlespiLimitToResourceModel(limit *flespi.Limit) *limitResourceModel {
+func (p *platformLimitResource) convertFlespiLimitToResourceModel(limit *flespi_limit.Limit) *limitResourceModel {
 	var state limitResourceModel
 
 	state.Id = types.Int64Value(limit.Id)
@@ -548,8 +599,8 @@ func (p *platformLimitResource) convertFlespiLimitToResourceModel(limit *flespi.
 	return &state
 }
 
-func (p *platformLimitResource) convertResourceModelToFlespiLimit(data limitResourceModel) flespi.Limit {
-	return flespi.Limit{
+func (p *platformLimitResource) convertResourceModelToFlespiLimit(data limitResourceModel) flespi_limit.Limit {
+	return flespi_limit.Limit{
 		Id:                     data.Id.ValueInt64(),
 		Name:                   data.Name.ValueString(),
 		Description:            data.Description.ValueString(),

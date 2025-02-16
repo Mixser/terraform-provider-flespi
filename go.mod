@@ -1,6 +1,7 @@
 module terraform-provider-flespi
 
-go 1.22.0
+go 1.22.7
+
 toolchain go1.23.5
 
 require (
@@ -72,3 +73,5 @@ require (
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/mixser/flespi-client => /Users/mike/Work/go/src/github.com/mixser/flespi-client
