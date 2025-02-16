@@ -3,6 +3,7 @@ package platform
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
@@ -403,7 +404,17 @@ func convertFlespiCustomServiceConfigurationToResourceModel(cfg *flespi_webhook.
 }
 
 func convertFlespiFlespiConfigurationToResourceModel(cfg *flespi_webhook.FlespiConfiguration) configurationModel {
-	return configurationModel{}
+	var result = configurationModel{
+		Type:     types.StringValue(cfg.Type),
+		Uri:      types.StringValue(cfg.Uri),
+		Method:   types.StringValue(cfg.Method),
+		Body:     types.StringValue(cfg.Body),
+		CA:       types.StringPointerValue(nil),
+		Headers:  []header{},
+		Validate: convertFlespiValidatorToResourceModel(cfg.Validate),
+	}
+
+	return result
 }
 
 func convertFlespiHeaderToResourceModel(flespiHeader flespi_webhook.Header) header {

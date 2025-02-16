@@ -73,3 +73,5 @@ require (
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/mixser/flespi-client => /Users/mike/Work/go/src/github.com/mixser/flespi-client

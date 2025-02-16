@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
@@ -20,15 +21,14 @@ type cdnResource struct {
 	client *flespi.Client
 }
 
-
 type cdnResourceModel struct {
-	Id types.Int64 `tfsdk:"id"`
-	Name types.String `tfsdk:"name"`
-	Size types.Int64 `tfsdk:"size"`
-	Blocked bool `tfsdk:"blocked"`
+	Id      types.Int64  `tfsdk:"id"`
+	Name    types.String `tfsdk:"name"`
+	Size    types.Int64  `tfsdk:"size"`
+	Blocked bool         `tfsdk:"blocked"`
 }
 
-func (p *cdnResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse){
+func (p *cdnResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
 	if request.ProviderData == nil {
 		return
 	}
@@ -38,8 +38,7 @@ func (p *cdnResource) Configure(ctx context.Context, request resource.ConfigureR
 	if !ok {
 		response.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *flespi.Client, got %T.Please report this issue to the provider developers.", request.ProviderData)
-		)
+			fmt.Sprintf("Expected *flespi.Client, got %T.Please report this issue to the provider developers.", request.ProviderData))
 		return
 	}
 
@@ -65,8 +64,6 @@ func (p *cdnResource) Schema(ctx context.Context, request resource.SchemaRequest
 			"size": schema.Int64Attribute{
 				Required: false,
 			},
-
-
 		},
 	}
 }
