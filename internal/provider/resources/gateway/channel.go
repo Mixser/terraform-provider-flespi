@@ -2,9 +2,9 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -28,8 +28,8 @@ type channelResourceModel struct {
 
 	MessagesTTL types.Int64 `tfsdk:"messages_ttl"`
 
-	Configuration types.Map `tfsdk:"configuration"`
-	Metadata      types.Map `tfsdk:"metadata"`
+	Configuration types.String `tfsdk:"configuration"`
+	Metadata      types.Map    `tfsdk:"metadata"`
 }
 
 func NewChannelResource() resource.Resource {
@@ -64,14 +64,13 @@ func (g *gwChannelResource) Schema(ctx context.Context, request resource.SchemaR
 				Optional: true,
 				Computed: true,
 			},
-			"configuration": schema.MapAttribute{
-				Optional:    true,
-				Computed:    true,
-				ElementType: types.DynamicType,
+			"configuration": schema.StringAttribute{
+				Optional: true,
+				Computed: true,
 			},
 			"metadata": schema.MapAttribute{
 				Optional:    true,
-				Computed:    true,
+				Computed:    false,
 				ElementType: types.StringType,
 			},
 		},
@@ -106,7 +105,12 @@ func (g *gwChannelResource) Create(ctx context.Context, request resource.CreateR
 		return
 	}
 
-	instance := g.convertResourceModelToFlespiChannel(*data)
+	instance, diags := g.convertResourceModelToFlespiChannel(ctx, *data)
+
+	if diags != nil && diags.HasError() {
+		response.Diagnostics.Append(diags...)
+		return
+	}
 
 	var channelInstance *flespi_channel.Channel
 	var err error
@@ -152,7 +156,7 @@ func (g *gwChannelResource) Create(ctx context.Context, request resource.CreateR
 		channelInstance.Id,
 	)
 
-	result, diags := g.convertFlespiChannelToResourceModel(channelInstance)
+	result, diags := g.convertFlespiChannelToResourceModel(ctx, channelInstance)
 
 	response.Diagnostics.Append(diags...)
 	response.Diagnostics.Append(response.State.Set(ctx, &result)...)
@@ -181,7 +185,7 @@ func (g *gwChannelResource) Read(ctx context.Context, request resource.ReadReque
 		return
 	}
 
-	result, diags := g.convertFlespiChannelToResourceModel(channelInstance)
+	result, diags := g.convertFlespiChannelToResourceModel(ctx, channelInstance)
 
 	response.Diagnostics.Append(diags...)
 	response.Diagnostics.Append(response.State.Set(ctx, &result)...)
@@ -197,7 +201,12 @@ func (g *gwChannelResource) Update(ctx context.Context, request resource.UpdateR
 		return
 	}
 
-	var channelInstance = g.convertResourceModelToFlespiChannel(data)
+	channelInstance, diags := g.convertResourceModelToFlespiChannel(ctx, data)
+
+	if diags != nil && diags.HasError() {
+		response.Diagnostics.Append(diags...)
+		return
+	}
 
 	_, err := flespi_channel.UpdateChannel(g.client, channelInstance)
 
@@ -218,7 +227,7 @@ func (g *gwChannelResource) Update(ctx context.Context, request resource.UpdateR
 		return
 	}
 
-	result, diags := g.convertFlespiChannelToResourceModel(updatedChannel)
+	result, diags := g.convertFlespiChannelToResourceModel(ctx, updatedChannel)
 	response.Diagnostics.Append(diags...)
 	response.Diagnostics.Append(response.State.Set(ctx, &result)...)
 }
@@ -244,16 +253,21 @@ func (g *gwChannelResource) Delete(ctx context.Context, req resource.DeleteReque
 	}
 }
 
-func (g *gwChannelResource) convertResourceModelToFlespiChannel(data channelResourceModel) flespi_channel.Channel {
-	configuration := make(map[string]interface{})
-	metadata := make(map[string]string)
+func (g *gwChannelResource) convertResourceModelToFlespiChannel(ctx context.Context, data channelResourceModel) (flespi_channel.Channel, diag.Diagnostics) {
+	var configuration map[string]interface{}
+	metadata := map[string]string{}
 
-	for key, value := range data.Configuration.Elements() {
-		configuration[string(key)] = value.(types.String).ValueString()
+	if err := json.Unmarshal([]byte(data.Configuration.ValueString()), &configuration); err != nil {
+		return flespi_channel.Channel{}, diag.Diagnostics{
+			diag.NewErrorDiagnostic(
+				"Unable to unmarshal configuration: "+data.Configuration.String(),
+				"Unable to unmarshal configuration: "+err.Error(),
+			),
+		}
 	}
 
-	for key, value := range data.Metadata.Elements() {
-		metadata[string(key)] = value.(types.String).ValueString()
+	if diags := data.Metadata.ElementsAs(ctx, &metadata, false); diags.HasError() {
+		return flespi_channel.Channel{}, diags
 	}
 
 	return flespi_channel.Channel{
@@ -265,10 +279,10 @@ func (g *gwChannelResource) convertResourceModelToFlespiChannel(data channelReso
 		MessagesTTL:   data.MessagesTTL.ValueInt64(),
 		Configuration: configuration,
 		Metadata:      metadata,
-	}
+	}, nil
 }
 
-func (g *gwChannelResource) convertFlespiChannelToResourceModel(channel *flespi_channel.Channel) (*channelResourceModel, diag.Diagnostics) {
+func (g *gwChannelResource) convertFlespiChannelToResourceModel(ctx context.Context, channel *flespi_channel.Channel) (*channelResourceModel, diag.Diagnostics) {
 	var data channelResourceModel
 
 	data.Id = types.Int64Value(channel.Id)
@@ -278,14 +292,24 @@ func (g *gwChannelResource) convertFlespiChannelToResourceModel(channel *flespi_
 	data.ProtocolName = types.StringValue(channel.ProtocolName)
 	data.MessagesTTL = types.Int64Value(channel.MessagesTTL)
 
-	configuration := make(map[string]attr.Value)
+	configuration, err := json.Marshal(channel.Configuration)
+	if err != nil {
+		return nil, diag.Diagnostics{
+			diag.NewErrorDiagnostic(
+				"Unable to marshal configuration: "+err.Error(),
+				err.Error(),
+			),
+		}
+	}
 
-	// for key, value := range channel.Configuration {
-	// 	configuration[key] = attr.Value
-	// }
+	data.Configuration = types.StringValue(string(configuration))
 
-	cfg, diags := types.MapValue(types.StringType, configuration)
-	data.Configuration = cfg
+	metadata, diags := types.MapValueFrom(ctx, types.StringType, channel.Metadata)
+	if diags.HasError() {
+		return nil, diags
+	}
 
-	return &data, diags
+	data.Metadata = metadata
+
+	return &data, nil
 }

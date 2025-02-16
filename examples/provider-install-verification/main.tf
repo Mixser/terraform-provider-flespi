@@ -71,11 +71,9 @@ resource "flespi_device" "iphone" {
 
 resource "flespi_channel" "test_channel" {
   name = "Test Channel"
-  enabled = false
+  enabled = true
 
   protocol_name = "test"
 
-  configuration = {
-    timeout = 120
-  }
+  configuration = "{\"timeout\":120}"
 }
