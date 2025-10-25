@@ -55,22 +55,22 @@ resource "flespi_webhook" "nimbus" {
 
 
 resource "flespi_device" "iphone" {
-  name = "iPhone 📱"
+  name    = "iPhone 📱"
   enabled = false
 
   device_type_id = 1
 
-  media_ttl = 86401
+  media_ttl    = 86401
   messages_ttl = 86400
 
   configuration = {
-    ident = 123456789123456
+    ident            = 123456789123456
     settings_polling = "once"
   }
 }
 
 resource "flespi_channel" "test_channel" {
-  name = "Test Channel"
+  name    = "Test Channel"
   enabled = true
 
   protocol_name = "test"
