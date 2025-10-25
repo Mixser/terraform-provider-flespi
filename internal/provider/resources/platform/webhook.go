@@ -188,9 +188,10 @@ func (p platformWebhookResource) Create(ctx context.Context, request resource.Cr
 	var webhookInstance flespi_webhook.Webhook
 	var err error
 
-	switch newWebhookInstance.(type) {
+	switch wh := newWebhookInstance.(type) {
 	case *flespi_webhook.SingleWebhook:
-		webhook := *newWebhookInstance.(*flespi_webhook.SingleWebhook)
+		webhook := *wh
+
 		webhookInstance, err = flespi_webhook.NewSignleWebhook(
 			p.client,
 			webhook.Name,
@@ -198,7 +199,8 @@ func (p platformWebhookResource) Create(ctx context.Context, request resource.Cr
 			flespi_webhook.SWWithConfiguration(webhook.Configuration),
 		)
 	case *flespi_webhook.ChainedWebhook:
-		webhook := *newWebhookInstance.(*flespi_webhook.ChainedWebhook)
+		webhook := *wh
+
 		webhookInstance, err = flespi_webhook.NewChainedWebhook(
 			p.client,
 			webhook.Name,

@@ -90,7 +90,6 @@ func (p *platformSubaccountResource) Create(ctx context.Context, request resourc
 	subaccountInstatnce, err := flespi_subaccount.NewSubaccount(
 		p.client,
 		newSubaccountInstance.Name,
-
 	)
 
 	if err != nil {

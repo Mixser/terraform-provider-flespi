@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	//	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/mixser/flespi-client"
 )
 
@@ -21,13 +21,12 @@ type cdnResource struct {
 	client *flespi.Client
 }
 
-type cdnResourceModel struct {
-	Id      types.Int64  `tfsdk:"id"`
-	Name    types.String `tfsdk:"name"`
-	Size    types.Int64  `tfsdk:"size"`
-	Blocked bool         `tfsdk:"blocked"`
-}
-
+//	type cdnResourceModel struct {
+//		Id      types.Int64  `tfsdk:"id"`
+//		Name    types.String `tfsdk:"name"`
+//		Size    types.Int64  `tfsdk:"size"`
+//		Blocked bool         `tfsdk:"blocked"`
+//	}
 func (p *cdnResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
 	if request.ProviderData == nil {
 		return

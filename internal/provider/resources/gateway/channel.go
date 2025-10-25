@@ -156,6 +156,14 @@ func (g *gwChannelResource) Create(ctx context.Context, request resource.CreateR
 		channelInstance.Id,
 	)
 
+	if err != nil {
+		response.Diagnostics.AddError(
+			"Failed to get channel after creation",
+			fmt.Sprintf("Error creating channel: %s", err),
+		)
+		return
+	}
+
 	result, diags := g.convertFlespiChannelToResourceModel(ctx, channelInstance)
 
 	response.Diagnostics.Append(diags...)

@@ -128,7 +128,7 @@ func (g *gwDeviceResource) Create(ctx context.Context, request resource.CreateRe
 		return
 	}
 
-	instance := g.convertResourceModelToFlespiDevice(*data)
+	instance := g.convertResourceModelToFlespiDevice(ctx, *data)
 
 	deviceInstance, err := flespi_device.NewDevice(
 		g.client,
@@ -200,7 +200,7 @@ func (g *gwDeviceResource) Update(ctx context.Context, request resource.UpdateRe
 		return
 	}
 
-	var device = g.convertResourceModelToFlespiDevice(state)
+	var device = g.convertResourceModelToFlespiDevice(ctx, state)
 
 	_, err := flespi_device.UpdateDevice(g.client, device)
 
@@ -249,11 +249,15 @@ func (g *gwDeviceResource) Delete(ctx context.Context, request resource.DeleteRe
 	}
 }
 
-func (g *gwDeviceResource) convertResourceModelToFlespiDevice(data deviceResourceModel) flespi_device.Device {
+func (g *gwDeviceResource) convertResourceModelToFlespiDevice(ctx context.Context, data deviceResourceModel) flespi_device.Device {
 	configuration := make(map[string]string)
 
 	for key, value := range data.Configuration.Elements() {
-		configuration[string(key)] = value.(types.String).ValueString()
+		if strValue, ok := value.(types.String); ok {
+			configuration[key] = strValue.ValueString()
+		} else {
+			tflog.Error(ctx, fmt.Sprintf("expected types.String, got %T (skip attribute)", value))
+		}
 	}
 
 	return flespi_device.Device{
