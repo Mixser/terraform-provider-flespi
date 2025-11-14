@@ -1,13 +1,11 @@
 module terraform-provider-flespi
 
-go 1.22.7
-
-toolchain go1.23.5
+go 1.24.0
 
 require (
 	github.com/hashicorp/terraform-plugin-docs v0.21.0
 	github.com/hashicorp/terraform-plugin-framework v1.14.1
-	github.com/hashicorp/terraform-plugin-log v0.9.0
+	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/mixser/flespi-client v0.1.10
 )
 
