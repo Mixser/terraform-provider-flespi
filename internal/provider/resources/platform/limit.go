@@ -427,7 +427,10 @@ func (p *platformLimitResource) Create(ctx context.Context, request resource.Cre
 	)
 
 	if err != nil {
-		tflog.Error(ctx, fmt.Sprintf("%s", err))
+		response.Diagnostics.AddError(
+			"Failed to create limit",
+			fmt.Sprintf("Error creating limit: %s", err),
+		)
 		return
 	}
 
