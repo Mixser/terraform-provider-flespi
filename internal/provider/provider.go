@@ -101,6 +101,7 @@ func (p *flespiProvider) Resources(ctx context.Context) []func() resource.Resour
 		platform.NewLimitResource,
 		platform.NewSubaccountResource,
 		platform.NewWebhookResource,
+		platform.NewTokenResource,
 		gateway.NewDeviceResource,
 		gateway.NewChannelResource,
 		gateway.NewGeofenceResource,
