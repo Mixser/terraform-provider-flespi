@@ -102,6 +102,7 @@ func (p *flespiProvider) Resources(ctx context.Context) []func() resource.Resour
 		platform.NewWebhookResource,
 		gateway.NewDeviceResource,
 		gateway.NewChannelResource,
+		gateway.NewGeofenceResource,
 	}
 }
 

@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/mixser/flespi-client"
 	flespi_webhook "github.com/mixser/flespi-client/resources/platform/webhook"
 )
@@ -192,7 +191,7 @@ func (p platformWebhookResource) Create(ctx context.Context, request resource.Cr
 	case *flespi_webhook.SingleWebhook:
 		webhook := *wh
 
-		webhookInstance, err = flespi_webhook.NewSignleWebhook(
+		webhookInstance, err = flespi_webhook.NewSingleWebhook(
 			p.client,
 			webhook.Name,
 			flespi_webhook.SWWithTriggers(webhook.Triggers),
