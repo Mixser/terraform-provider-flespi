@@ -210,7 +210,10 @@ func (p platformWebhookResource) Create(ctx context.Context, request resource.Cr
 	}
 
 	if err != nil {
-		tflog.Error(ctx, fmt.Sprintf("%s", err))
+		response.Diagnostics.AddError(
+			"Failed to create webhook",
+			fmt.Sprintf("Error creating webhook: %s", err),
+		)
 		return
 	}
 
@@ -280,8 +283,8 @@ func (p platformWebhookResource) Update(ctx context.Context, request resource.Up
 
 	if err != nil {
 		response.Diagnostics.AddError(
-			"Error Reading Flespi Subaccount",
-			fmt.Sprintf("Could not read subaccount Id: %d: %s", webhookId, err.Error()),
+			"Error Reading Flespi Webhook",
+			fmt.Sprintf("Could not read webhook Id: %d: %s", webhookId, err.Error()),
 		)
 	}
 
@@ -448,7 +451,7 @@ func convertWebhookResourceModelToFlespiWebhook(data webhookResourceModel) flesp
 			Triggers:      convertTriggersToFlespiTriggers(data.Triggers),
 			Configuration: convertConfigurationResourceModelToFlespiConfiguration(data.Configurations[0]),
 		}
-	case "chained-webhool":
+	case "chained-webhook":
 		result = &flespi_webhook.ChainedWebhook{
 			Id:            data.Id.ValueInt64(),
 			Name:          data.Name.ValueString(),
