@@ -4,6 +4,7 @@ import (
 	"context"
 	"terraform-provider-flespi/internal/provider/resources/gateway"
 	"terraform-provider-flespi/internal/provider/resources/platform"
+	"terraform-provider-flespi/internal/provider/resources/storage"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -103,6 +104,7 @@ func (p *flespiProvider) Resources(ctx context.Context) []func() resource.Resour
 		gateway.NewDeviceResource,
 		gateway.NewChannelResource,
 		gateway.NewGeofenceResource,
+		storage.NewCDNResource,
 	}
 }
 
