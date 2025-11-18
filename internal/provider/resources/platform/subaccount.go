@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/mixser/flespi-client"
 	flespi_subaccount "github.com/mixser/flespi-client/resources/platform/subaccount"
 )
@@ -81,23 +80,22 @@ func (p *platformSubaccountResource) Create(ctx context.Context, request resourc
 		return
 	}
 
-	newSubaccountInstance := flespi_subaccount.Subaccount{
-		Name:     data.Name.ValueString(),
-		LimitId:  data.LimitId.ValueInt64(),
-		Metadata: map[string]string{},
-	}
-
 	subaccountInstatnce, err := flespi_subaccount.NewSubaccount(
 		p.client,
-		newSubaccountInstance.Name,
+		data.Name.ValueString(),
+		flespi_subaccount.WithLimit(data.LimitId.ValueInt64()),
 	)
 
 	if err != nil {
-		tflog.Error(ctx, fmt.Sprintf("%s", err))
+		response.Diagnostics.AddError(
+			"Failed to create subaccount",
+			fmt.Sprintf("Error creating subaccount: %s", err),
+		)
 		return
 	}
 
 	data.Id = types.Int64Value(subaccountInstatnce.Id)
+	data.LimitId = types.Int64Value(subaccountInstatnce.LimitId)
 
 	response.Diagnostics.Append(response.State.Set(ctx, &data)...)
 }
