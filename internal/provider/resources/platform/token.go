@@ -26,13 +26,13 @@ type platformTokenResource struct {
 }
 
 type tokenResourceModel struct {
-	Id      types.Int64  `tfsdk:"id"`
-	Key     types.String `tfsdk:"key"`
-	Info    types.String `tfsdk:"info"`
-	Enabled types.Bool   `tfsdk:"enabled"`
-	Expire  types.Int64  `tfsdk:"expire"`
-	TTL     types.Int64  `tfsdk:"ttl"`
-	Metadata types.Map   `tfsdk:"metadata"`
+	Id       types.Int64  `tfsdk:"id"`
+	Key      types.String `tfsdk:"key"`
+	Info     types.String `tfsdk:"info"`
+	Enabled  types.Bool   `tfsdk:"enabled"`
+	Expire   types.Int64  `tfsdk:"expire"`
+	TTL      types.Int64  `tfsdk:"ttl"`
+	Metadata types.Map    `tfsdk:"metadata"`
 }
 
 func NewTokenResource() resource.Resource {

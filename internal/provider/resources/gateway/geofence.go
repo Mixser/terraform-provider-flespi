@@ -93,7 +93,7 @@ func (g *gwGeofenceResource) Create(ctx context.Context, request resource.Create
 		return
 	}
 
-	instance, diags := g.convertResourceModelToFlespiGeofence(ctx, *data)
+	instance, diags := g.convertResourceModelToFlespiGeofence(*data)
 
 	if diags != nil {
 		response.Diagnostics.Append(diags)
@@ -116,7 +116,7 @@ func (g *gwGeofenceResource) Create(ctx context.Context, request resource.Create
 		return
 	}
 
-	result, diags := g.convertFlespiGeofenceToResourceModel(ctx, *geofenceInstance)
+	result, diags := g.convertFlespiGeofenceToResourceModel(*geofenceInstance)
 
 	response.Diagnostics.Append(diags)
 	response.Diagnostics.Append(response.State.Set(ctx, &result)...)
@@ -158,7 +158,7 @@ func (g *gwGeofenceResource) Read(ctx context.Context, request resource.ReadRequ
 		return
 	}
 
-	result, diags := g.convertFlespiGeofenceToResourceModel(ctx, *foundGeofence)
+	result, diags := g.convertFlespiGeofenceToResourceModel(*foundGeofence)
 
 	response.Diagnostics.Append(diags)
 	response.Diagnostics.Append(response.State.Set(ctx, &result)...)
@@ -173,7 +173,7 @@ func (g *gwGeofenceResource) Update(ctx context.Context, request resource.Update
 		return
 	}
 
-	instance, diags := g.convertResourceModelToFlespiGeofence(ctx, *data)
+	instance, diags := g.convertResourceModelToFlespiGeofence(*data)
 
 	if diags != nil {
 		response.Diagnostics.Append(diags)
@@ -217,7 +217,7 @@ func (g *gwGeofenceResource) Update(ctx context.Context, request resource.Update
 		return
 	}
 
-	result, diags := g.convertFlespiGeofenceToResourceModel(ctx, *foundGeofence)
+	result, diags := g.convertFlespiGeofenceToResourceModel(*foundGeofence)
 
 	response.Diagnostics.Append(diags)
 	response.Diagnostics.Append(response.State.Set(ctx, &result)...)
@@ -243,7 +243,7 @@ func (g *gwGeofenceResource) Delete(ctx context.Context, request resource.Delete
 	}
 }
 
-func (g *gwGeofenceResource) convertResourceModelToFlespiGeofence(ctx context.Context, data geofenceResourceModel) (flespi_geofence.Geofence, diag.Diagnostic) {
+func (g *gwGeofenceResource) convertResourceModelToFlespiGeofence(data geofenceResourceModel) (flespi_geofence.Geofence, diag.Diagnostic) {
 	var geometry flespi_geofence.GeofenceGeometry
 
 	// Parse geometry from JSON
@@ -280,7 +280,7 @@ func (g *gwGeofenceResource) convertResourceModelToFlespiGeofence(ctx context.Co
 	}, nil
 }
 
-func (g *gwGeofenceResource) convertFlespiGeofenceToResourceModel(ctx context.Context, data flespi_geofence.Geofence) (*geofenceResourceModel, diag.Diagnostic) {
+func (g *gwGeofenceResource) convertFlespiGeofenceToResourceModel(data flespi_geofence.Geofence) (*geofenceResourceModel, diag.Diagnostic) {
 	var result geofenceResourceModel
 
 	result.ID = types.Int64Value(data.Id)
