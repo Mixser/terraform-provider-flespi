@@ -77,3 +77,12 @@ resource "flespi_channel" "test_channel" {
 
   configuration = "{\"timeout\":120}"
 }
+
+resource "flespi_geofence" "star_geometry" {
+  name = "Test ⭐️ Geofence"
+
+  enabled = true
+
+  geometry = "{\"type\": \"circle\", \"center\": {\"lat\": 50, \"lon\": 40}, \"radius\": 0.1}"
+
+}

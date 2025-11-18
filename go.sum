@@ -155,6 +155,8 @@ github.com/mixser/flespi-client v0.1.11 h1:xjKxlyzbI8yeFTIIO9xKMCIzmW69Hc0Pdxm0s
 github.com/mixser/flespi-client v0.1.11/go.mod h1:dYioPBH/igrmEciKEZGzwSmY4rSV/07reebjsmj0tCA=
 github.com/mixser/flespi-client v0.2.0 h1:7iXjtGbp3FRdOr3o1CVWNxsmPEoTRGNg3C/WYyOwX6c=
 github.com/mixser/flespi-client v0.2.0/go.mod h1:dYioPBH/igrmEciKEZGzwSmY4rSV/07reebjsmj0tCA=
+github.com/mixser/flespi-client v0.2.1 h1:uh6EnIAKm7lvPCLh8DNC2JXZ1No0fbLQK6k928c8MTQ=
+github.com/mixser/flespi-client v0.2.1/go.mod h1:dYioPBH/igrmEciKEZGzwSmY4rSV/07reebjsmj0tCA=
 github.com/oklog/run v1.2.0 h1:O8x3yXwah4A73hJdlrwo/2X6J62gE5qTMusH0dvz60E=
 github.com/oklog/run v1.2.0/go.mod h1:mgDbKRSwPhJfesJ4PntqFUbKQRZ50NgmZTSPlFA0YFk=
 github.com/pjbgf/sha1cd v0.3.0 h1:4D5XXmUUBUl/xQ6IjCkEAbqXskkq/4O7LmGn0AqMDs4=
