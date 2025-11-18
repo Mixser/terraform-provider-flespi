@@ -141,7 +141,10 @@ func (g *gwDeviceResource) Create(ctx context.Context, request resource.CreateRe
 	)
 
 	if err != nil {
-		tflog.Error(ctx, fmt.Sprintf("%s", err))
+		response.Diagnostics.AddError(
+			"Failed to create device",
+			fmt.Sprintf("Error creating device: %s", err),
+		)
 		return
 	}
 
@@ -151,7 +154,10 @@ func (g *gwDeviceResource) Create(ctx context.Context, request resource.CreateRe
 	)
 
 	if err != nil {
-		tflog.Error(ctx, fmt.Sprintf("%s", err))
+		response.Diagnostics.AddError(
+			"Failed to get device after creation",
+			fmt.Sprintf("Error reading device: %s", err),
+		)
 		return
 	}
 
@@ -216,8 +222,8 @@ func (g *gwDeviceResource) Update(ctx context.Context, request resource.UpdateRe
 
 	if err != nil {
 		response.Diagnostics.AddError(
-			"Error Reading Flespi Limit",
-			"Could not read limit Id: "+state.Id.String()+": "+err.Error(),
+			"Error Reading Flespi Device",
+			"Could not read device Id: "+state.Id.String()+": "+err.Error(),
 		)
 	}
 
