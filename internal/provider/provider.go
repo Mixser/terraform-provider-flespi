@@ -104,6 +104,7 @@ func (p *flespiProvider) Resources(ctx context.Context) []func() resource.Resour
 		gateway.NewDeviceResource,
 		gateway.NewChannelResource,
 		gateway.NewGeofenceResource,
+		gateway.NewStreamResource,
 		storage.NewCDNResource,
 	}
 }
