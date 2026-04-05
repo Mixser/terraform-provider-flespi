@@ -141,6 +141,8 @@ github.com/mitchellh/reflectwalk v1.0.2 h1:G2LzWKi524PWgd3mLHV8Y5k7s6XUvT0Gef6zx
 github.com/mitchellh/reflectwalk v1.0.2/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
 github.com/mixser/flespi-client v0.2.1 h1:uh6EnIAKm7lvPCLh8DNC2JXZ1No0fbLQK6k928c8MTQ=
 github.com/mixser/flespi-client v0.2.1/go.mod h1:dYioPBH/igrmEciKEZGzwSmY4rSV/07reebjsmj0tCA=
+github.com/mixser/flespi-client v0.3.1 h1:sWLGGyBjkC/L3G/t50dCDCb173pC2wEFiT5lUfG/OUU=
+github.com/mixser/flespi-client v0.3.1/go.mod h1:dYioPBH/igrmEciKEZGzwSmY4rSV/07reebjsmj0tCA=
 github.com/oklog/run v1.2.0 h1:O8x3yXwah4A73hJdlrwo/2X6J62gE5qTMusH0dvz60E=
 github.com/oklog/run v1.2.0/go.mod h1:mgDbKRSwPhJfesJ4PntqFUbKQRZ50NgmZTSPlFA0YFk=
 github.com/pjbgf/sha1cd v0.3.2 h1:a9wb0bp1oC2TGwStyn0Umc/IGKQnEgF0vVaZ8QF8eo4=

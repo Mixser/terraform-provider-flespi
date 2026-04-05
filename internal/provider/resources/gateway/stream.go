@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/mixser/flespi-client"
+	flespi "github.com/mixser/flespi-client"
 	flespi_stream "github.com/mixser/flespi-client/resources/gateway/stream"
 )
 
@@ -22,7 +22,7 @@ var (
 )
 
 type gwStreamResource struct {
-	client *flespi.Client
+	client *flespi_stream.StreamClient
 }
 
 type streamResourceModel struct {
@@ -63,7 +63,7 @@ func (g *gwStreamResource) Configure(ctx context.Context, request resource.Confi
 		return
 	}
 
-	g.client = client
+	g.client = client.Streams
 }
 
 func (g *gwStreamResource) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -125,8 +125,7 @@ func (g *gwStreamResource) Create(ctx context.Context, request resource.CreateRe
 
 	instance := g.convertResourceModelToFlespiStream(ctx, *data)
 
-	streamInstance, err := flespi_stream.NewStream(
-		g.client,
+	streamInstance, err := g.client.Create(
 		instance.Name,
 		instance.ProtocolId,
 		flespi_stream.WithStatus(instance.Enabled),
@@ -144,10 +143,7 @@ func (g *gwStreamResource) Create(ctx context.Context, request resource.CreateRe
 		return
 	}
 
-	streamInstance, err = flespi_stream.GetStream(
-		g.client,
-		streamInstance.Id,
-	)
+	streamInstance, err = g.client.Get(streamInstance.Id)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -173,7 +169,7 @@ func (g *gwStreamResource) Read(ctx context.Context, request resource.ReadReques
 		return
 	}
 
-	stream, err := flespi_stream.GetStream(g.client, state.Id.ValueInt64())
+	stream, err := g.client.Get(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -203,7 +199,7 @@ func (g *gwStreamResource) Update(ctx context.Context, request resource.UpdateRe
 
 	var stream = g.convertResourceModelToFlespiStream(ctx, state)
 
-	_, err := flespi_stream.UpdateStream(g.client, stream)
+	_, err := g.client.Update(stream)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -213,7 +209,7 @@ func (g *gwStreamResource) Update(ctx context.Context, request resource.UpdateRe
 		return
 	}
 
-	updatedStream, err := flespi_stream.GetStream(g.client, state.Id.ValueInt64())
+	updatedStream, err := g.client.Get(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -239,7 +235,7 @@ func (g *gwStreamResource) Delete(ctx context.Context, request resource.DeleteRe
 		return
 	}
 
-	err := flespi_stream.DeleteStreamById(g.client, state.Id.ValueInt64())
+	err := g.client.DeleteById(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(

@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/mixser/flespi-client"
+	flespi "github.com/mixser/flespi-client"
 	flespi_webhook "github.com/mixser/flespi-client/resources/platform/webhook"
 )
 
@@ -19,7 +19,7 @@ var (
 )
 
 type platformWebhookResource struct {
-	client *flespi.Client
+	client *flespi_webhook.WebhookClient
 }
 
 type webhookResourceModel struct {
@@ -79,7 +79,7 @@ func (p *platformWebhookResource) Configure(ctx context.Context, request resourc
 		return
 	}
 
-	p.client = client
+	p.client = client.Webhooks
 }
 
 func (p platformWebhookResource) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -191,8 +191,7 @@ func (p platformWebhookResource) Create(ctx context.Context, request resource.Cr
 	case *flespi_webhook.SingleWebhook:
 		webhook := *wh
 
-		webhookInstance, err = flespi_webhook.NewSingleWebhook(
-			p.client,
+		webhookInstance, err = p.client.NewSingle(
 			webhook.Name,
 			flespi_webhook.SWWithTriggers(webhook.Triggers),
 			flespi_webhook.SWWithConfiguration(webhook.Configuration),
@@ -200,8 +199,7 @@ func (p platformWebhookResource) Create(ctx context.Context, request resource.Cr
 	case *flespi_webhook.ChainedWebhook:
 		webhook := *wh
 
-		webhookInstance, err = flespi_webhook.NewChainedWebhook(
-			p.client,
+		webhookInstance, err = p.client.NewChained(
 			webhook.Name,
 			flespi_webhook.CWWithTriggers(webhook.Triggers),
 			flespi_webhook.CWWithConfigurations(webhook.Configuration),
@@ -231,7 +229,7 @@ func (p platformWebhookResource) Read(ctx context.Context, request resource.Read
 		return
 	}
 
-	webhook, err := flespi_webhook.GetWebhook(p.client, state.Id.ValueInt64())
+	webhook, err := p.client.Get(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -268,7 +266,7 @@ func (p platformWebhookResource) Update(ctx context.Context, request resource.Up
 
 	webhook := convertWebhookResourceModelToFlespiWebhook(plan)
 
-	_, err := flespi_webhook.UpdateWebhook(p.client, webhook)
+	_, err := p.client.Update(webhook)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -278,7 +276,7 @@ func (p platformWebhookResource) Update(ctx context.Context, request resource.Up
 		return
 	}
 
-	updatedWebhook, err := flespi_webhook.GetWebhook(p.client, webhookId)
+	updatedWebhook, err := p.client.Get(webhookId)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -306,7 +304,7 @@ func (p platformWebhookResource) Delete(ctx context.Context, request resource.De
 		return
 	}
 
-	err := flespi_webhook.DeleteWebhookById(p.client, state.Id.ValueInt64())
+	err := p.client.DeleteById(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(

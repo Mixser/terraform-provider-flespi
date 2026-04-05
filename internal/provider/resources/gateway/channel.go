@@ -9,12 +9,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/mixser/flespi-client"
+	flespi "github.com/mixser/flespi-client"
 	flespi_channel "github.com/mixser/flespi-client/resources/gateway/channel"
 )
 
 type gwChannelResource struct {
-	client *flespi.Client
+	client *flespi_channel.ChannelClient
 }
 
 type channelResourceModel struct {
@@ -93,7 +93,7 @@ func (g *gwChannelResource) Configure(ctx context.Context, request resource.Conf
 		return
 	}
 
-	g.client = client
+	g.client = client.Channels
 }
 
 func (g *gwChannelResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) {
@@ -116,8 +116,7 @@ func (g *gwChannelResource) Create(ctx context.Context, request resource.CreateR
 	var err error
 
 	if instance.ProtocolId != 0 {
-		channelInstance, err = flespi_channel.NewChannelWithProtocolId(
-			g.client,
+		channelInstance, err = g.client.CreateWithProtocolId(
 			instance.Name,
 			instance.ProtocolId,
 			flespi_channel.WithStatus(instance.Enabled),
@@ -126,8 +125,7 @@ func (g *gwChannelResource) Create(ctx context.Context, request resource.CreateR
 			flespi_channel.WithMetadata(instance.Metadata),
 		)
 	} else if instance.ProtocolName != "" {
-		channelInstance, err = flespi_channel.NewChannelWithProtocolName(
-			g.client,
+		channelInstance, err = g.client.CreateWithProtocolName(
 			instance.Name,
 			instance.ProtocolName,
 			flespi_channel.WithStatus(instance.Enabled),
@@ -151,10 +149,7 @@ func (g *gwChannelResource) Create(ctx context.Context, request resource.CreateR
 		return
 	}
 
-	channelInstance, err = flespi_channel.GetChannel(
-		g.client,
-		channelInstance.Id,
-	)
+	channelInstance, err = g.client.Get(channelInstance.Id)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -180,10 +175,7 @@ func (g *gwChannelResource) Read(ctx context.Context, request resource.ReadReque
 		return
 	}
 
-	channelInstance, err := flespi_channel.GetChannel(
-		g.client,
-		data.Id.ValueInt64(),
-	)
+	channelInstance, err := g.client.Get(data.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -216,7 +208,7 @@ func (g *gwChannelResource) Update(ctx context.Context, request resource.UpdateR
 		return
 	}
 
-	_, err := flespi_channel.UpdateChannel(g.client, channelInstance)
+	_, err := g.client.Update(channelInstance)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -226,7 +218,7 @@ func (g *gwChannelResource) Update(ctx context.Context, request resource.UpdateR
 		return
 	}
 
-	updatedChannel, err := flespi_channel.GetChannel(g.client, channelInstance.Id)
+	updatedChannel, err := g.client.Get(channelInstance.Id)
 	if err != nil {
 		response.Diagnostics.AddError(
 			"Failed to read updated channel",
@@ -250,7 +242,7 @@ func (g *gwChannelResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	err := flespi_channel.DeleteChannelById(g.client, data.Id.ValueInt64())
+	err := g.client.DeleteById(data.Id.ValueInt64())
 
 	if err != nil {
 		resp.Diagnostics.AddError(

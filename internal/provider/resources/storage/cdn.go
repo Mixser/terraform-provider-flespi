@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/mixser/flespi-client"
+	flespi "github.com/mixser/flespi-client"
 	flespi_cdn "github.com/mixser/flespi-client/resources/storage/cdn"
 )
 
@@ -19,7 +19,7 @@ var (
 )
 
 type cdnResource struct {
-	client *flespi.Client
+	client *flespi_cdn.CDNClient
 }
 
 type cdnResourceModel struct {
@@ -47,7 +47,7 @@ func (p *cdnResource) Configure(ctx context.Context, request resource.ConfigureR
 		return
 	}
 
-	p.client = client
+	p.client = client.CDNs
 }
 
 func (p *cdnResource) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -88,7 +88,7 @@ func (p *cdnResource) Create(ctx context.Context, request resource.CreateRequest
 		return
 	}
 
-	cdnInstance, err := flespi_cdn.NewCDN(p.client, data.Name.ValueString())
+	cdnInstance, err := p.client.Create(data.Name.ValueString())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -113,7 +113,7 @@ func (p *cdnResource) Read(ctx context.Context, request resource.ReadRequest, re
 		return
 	}
 
-	cdn, err := flespi_cdn.GetCDN(p.client, state.Id.ValueInt64())
+	cdn, err := p.client.Get(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -147,7 +147,7 @@ func (p *cdnResource) Update(ctx context.Context, request resource.UpdateRequest
 
 	cdn := p.convertResourceModelToFlespiCDN(plan)
 
-	_, err := flespi_cdn.UpdateCDN(p.client, cdn)
+	_, err := p.client.Update(cdn)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -157,7 +157,7 @@ func (p *cdnResource) Update(ctx context.Context, request resource.UpdateRequest
 		return
 	}
 
-	updatedCDN, err := flespi_cdn.GetCDN(p.client, plan.Id.ValueInt64())
+	updatedCDN, err := p.client.Get(plan.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -187,7 +187,7 @@ func (p *cdnResource) Delete(ctx context.Context, request resource.DeleteRequest
 		return
 	}
 
-	err := flespi_cdn.DeleteCDNById(p.client, state.Id.ValueInt64())
+	err := p.client.DeleteById(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(

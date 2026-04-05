@@ -1,64 +1,150 @@
-# Terraform Provider Scaffolding (Terraform Plugin Framework)
+# Terraform Provider for Flespi
 
-_This template repository is built on the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework). The template repository built on the [Terraform Plugin SDK](https://github.com/hashicorp/terraform-plugin-sdk) can be found at [terraform-provider-scaffolding](https://github.com/hashicorp/terraform-provider-scaffolding). See [Which SDK Should I Use?](https://developer.hashicorp.com/terraform/plugin/framework-benefits) in the Terraform documentation for additional information._
+A Terraform provider for managing resources on the [Flespi](https://flespi.com) telematics platform.
 
-This repository is a *template* for a [Terraform](https://www.terraform.io) provider. It is intended as a starting point for creating Terraform providers, containing:
-
-- A resource and a data source (`internal/provider/`),
-- Examples (`examples/`) and generated documentation (`docs/`),
-- Miscellaneous meta files.
-
-These files contain boilerplate code that you will need to edit to create your own Terraform provider. Tutorials for creating Terraform providers can be found on the [HashiCorp Developer](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework) platform. _Terraform Plugin Framework specific guides are titled accordingly._
-
-Please see the [GitHub template repository documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template) for how to create a new repository from this template on GitHub.
-
-Once you've written your provider, you'll want to [publish it on the Terraform Registry](https://developer.hashicorp.com/terraform/registry/providers/publishing) so that others can use it.
+Built with the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework).
 
 ## Requirements
 
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.19
+- [Go](https://golang.org/doc/install) >= 1.21 (for building from source)
 
-## Building The Provider
+## Provider Configuration
 
-1. Clone the repository
-1. Enter the repository directory
-1. Build the provider using the Go `install` command:
+```hcl
+terraform {
+  required_providers {
+    flespi = {
+      source = "mixser/flespi"
+    }
+  }
+}
 
-```shell
-go install
+provider "flespi" {
+  token = var.flespi_token  # or set FLESPI_TOKEN env var
+}
 ```
 
-## Adding Dependencies
+The provider requires a Flespi master token. You can create tokens in the [Flespi panel](https://flespi.io).
 
-This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
-Please see the Go documentation for the most up to date information about using Go modules.
+## Resources
 
-To add a new dependency `github.com/author/dependency` to your Terraform provider:
+### Gateway
 
-```shell
-go get github.com/author/dependency
-go mod tidy
+| Resource | Description |
+|----------|-------------|
+| `flespi_device` | GPS/telematics device |
+| `flespi_channel` | Protocol channel (by protocol ID or name) |
+| `flespi_stream` | Message stream |
+| `flespi_geofence` | Geofence zone (circle, polygon, or corridor) |
+
+### Platform
+
+| Resource | Description |
+|----------|-------------|
+| `flespi_webhook` | Webhook (single or chained) |
+| `flespi_token` | API access token |
+| `flespi_subaccount` | Sub-account |
+| `flespi_limit` | Resource usage limit set |
+
+### Storage
+
+| Resource | Description |
+|----------|-------------|
+| `flespi_cdn` | CDN storage bucket |
+
+## Example Usage
+
+```hcl
+# Create a device type limit set
+resource "flespi_limit" "standard" {
+  name         = "standard-plan"
+  devices_count = 100
+  channels_count = 10
+}
+
+# Create a sub-account with that limit
+resource "flespi_subaccount" "tenant" {
+  name     = "tenant-a"
+  limit_id = flespi_limit.standard.id
+}
+
+# Create a channel
+resource "flespi_channel" "gps" {
+  name          = "gps-channel"
+  enabled       = true
+  protocol_name = "Teltonika"
+}
+
+# Create a device
+resource "flespi_device" "tracker" {
+  name           = "vehicle-tracker-01"
+  enabled        = true
+  device_type_id = 1
+}
+
+# Create a stream
+resource "flespi_stream" "kafka" {
+  name        = "kafka-stream"
+  protocol_id = 7
+  enabled     = true
+  queue_ttl   = 86400
+}
+
+# Create a webhook
+resource "flespi_webhook" "notify" {
+  name = "event-webhook"
+  type = "single-webhook"
+
+  triggers = [
+    {
+      topic = "gw/devices/+/messages"
+    }
+  ]
+
+  configurations = [
+    {
+      type    = "custom-server"
+      uri     = "https://example.com/webhook"
+      method  = "POST"
+      body    = "{\"device\": \"{#device_id}\"}"
+      headers = []
+    }
+  ]
+}
 ```
 
-Then commit the changes to `go.mod` and `go.sum`.
+## Building from Source
 
-## Using the provider
+```shell
+git clone https://github.com/mixser/terraform-provider-flespi
+cd terraform-provider-flespi
+go build ./...
+```
 
-Fill this in for each provider
+To install locally for development, add a [dev override](https://developer.hashicorp.com/terraform/cli/config/config-file#development-overrides-for-provider-developers) to your `~/.terraformrc`:
+
+```hcl
+provider_installation {
+  dev_overrides {
+    "mixser/flespi" = "/path/to/your/GOPATH/bin"
+  }
+  direct {}
+}
+```
+
+Then run:
+
+```shell
+go install .
+```
 
 ## Developing the Provider
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (see [Requirements](#requirements) above).
-
-To compile the provider, run `go install`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
-
-To generate or update documentation, run `go generate`.
-
-In order to run the full suite of Acceptance tests, run `make testacc`.
-
-*Note:* Acceptance tests create real resources, and often cost money to run.
-
 ```shell
-make testacc
+# Build
+go build ./...
+
+# Generate docs
+go generate ./...
 ```
