@@ -26,13 +26,14 @@ type platformTokenResource struct {
 }
 
 type tokenResourceModel struct {
-	Id       types.Int64  `tfsdk:"id"`
-	Key      types.String `tfsdk:"key"`
-	Info     types.String `tfsdk:"info"`
-	Enabled  types.Bool   `tfsdk:"enabled"`
-	Expire   types.Int64  `tfsdk:"expire"`
-	TTL      types.Int64  `tfsdk:"ttl"`
-	Metadata types.Map    `tfsdk:"metadata"`
+	Id        types.Int64  `tfsdk:"id"`
+	Key       types.String `tfsdk:"key"`
+	Info      types.String `tfsdk:"info"`
+	Enabled   types.Bool   `tfsdk:"enabled"`
+	Expire    types.Int64  `tfsdk:"expire"`
+	TTL       types.Int64  `tfsdk:"ttl"`
+	AccountId types.Int64  `tfsdk:"account_id"`
+	Metadata  types.Map    `tfsdk:"metadata"`
 }
 
 func NewTokenResource() resource.Resource {
@@ -97,6 +98,11 @@ func (p *platformTokenResource) Schema(ctx context.Context, request resource.Sch
 				Computed:    true,
 				Description: "Token TTL in seconds",
 			},
+			"account_id": schema.Int64Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Account ID",
+			},
 			"metadata": schema.MapAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -126,6 +132,10 @@ func (p *platformTokenResource) Create(ctx context.Context, request resource.Cre
 
 	if !data.TTL.IsNull() && !data.TTL.IsUnknown() {
 		options = append(options, flespi_token.WithTTL(data.TTL.ValueInt64()))
+	}
+
+	if !data.AccountId.IsNull() && !data.AccountId.IsUnknown() {
+		options = append(options, flespi_token.WithAccountId(data.AccountId.ValueInt64()))
 	}
 
 	tokenInstance, err := p.client.Create(data.Info.ValueString(), options...)
@@ -246,6 +256,7 @@ func (p *platformTokenResource) convertFlespiTokenToResourceModel(token *flespi_
 	result.Enabled = types.BoolValue(token.Enabled)
 	result.Expire = types.Int64Value(token.Expire)
 	result.TTL = types.Int64Value(token.TTL)
+	result.AccountId = types.Int64Value(token.AccountId)
 
 	metadata := make(map[string]attr.Value)
 	for key, value := range token.Metadata {
@@ -270,12 +281,13 @@ func (p *platformTokenResource) convertResourceModelToFlespiToken(data tokenReso
 	}
 
 	return flespi_token.Token{
-		Id:       data.Id.ValueInt64(),
-		Key:      data.Key.ValueString(),
-		Info:     data.Info.ValueString(),
-		Enabled:  data.Enabled.ValueBool(),
-		Expire:   data.Expire.ValueInt64(),
-		TTL:      data.TTL.ValueInt64(),
-		Metadata: metadata,
+		Id:        data.Id.ValueInt64(),
+		Key:       data.Key.ValueString(),
+		Info:      data.Info.ValueString(),
+		Enabled:   data.Enabled.ValueBool(),
+		Expire:    data.Expire.ValueInt64(),
+		TTL:       data.TTL.ValueInt64(),
+		AccountId: data.AccountId.ValueInt64(),
+		Metadata:  metadata,
 	}
 }
