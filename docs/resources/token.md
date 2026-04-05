@@ -22,6 +22,7 @@ description: |-
 
 ### Optional
 
+- `access` (String) Token access permissions as JSON. Use jsonencode() in HCL. Example: jsonencode({type=1}) for master, jsonencode({type=0}) for standard, jsonencode({type=2, acl=[{uri="gw/devices", methods=["GET"], ids="all"}]}) for ACL.
 - `account_id` (Number) Account ID
 - `expire` (Number) Token expiration timestamp
 - `metadata` (Map of String) Token metadata

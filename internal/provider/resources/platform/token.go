@@ -2,8 +2,10 @@ package platform
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -26,14 +28,15 @@ type platformTokenResource struct {
 }
 
 type tokenResourceModel struct {
-	Id        types.Int64  `tfsdk:"id"`
-	Key       types.String `tfsdk:"key"`
-	Info      types.String `tfsdk:"info"`
-	Enabled   types.Bool   `tfsdk:"enabled"`
-	Expire    types.Int64  `tfsdk:"expire"`
-	TTL       types.Int64  `tfsdk:"ttl"`
-	AccountId types.Int64  `tfsdk:"account_id"`
-	Metadata  types.Map    `tfsdk:"metadata"`
+	Id        types.Int64          `tfsdk:"id"`
+	Key       types.String         `tfsdk:"key"`
+	Info      types.String         `tfsdk:"info"`
+	Enabled   types.Bool           `tfsdk:"enabled"`
+	Expire    types.Int64          `tfsdk:"expire"`
+	TTL       types.Int64          `tfsdk:"ttl"`
+	AccountId types.Int64          `tfsdk:"account_id"`
+	Metadata  types.Map            `tfsdk:"metadata"`
+	Access    jsontypes.Normalized `tfsdk:"access"`
 }
 
 func NewTokenResource() resource.Resource {
@@ -109,6 +112,12 @@ func (p *platformTokenResource) Schema(ctx context.Context, request resource.Sch
 				ElementType: types.StringType,
 				Description: "Token metadata",
 			},
+			"access": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				CustomType:  jsontypes.NormalizedType{},
+				Description: "Token access permissions as JSON. Use jsonencode() in HCL. Example: jsonencode({type=1}) for master, jsonencode({type=0}) for standard, jsonencode({type=2, acl=[{uri=\"gw/devices\", methods=[\"GET\"], ids=\"all\"}]}) for ACL.",
+			},
 		},
 	}
 }
@@ -136,6 +145,15 @@ func (p *platformTokenResource) Create(ctx context.Context, request resource.Cre
 
 	if !data.AccountId.IsNull() && !data.AccountId.IsUnknown() {
 		options = append(options, flespi_token.WithAccountId(data.AccountId.ValueInt64()))
+	}
+
+	if !data.Access.IsNull() && !data.Access.IsUnknown() {
+		var access flespi_token.TokenAccess
+		if err := json.Unmarshal([]byte(data.Access.ValueString()), &access); err != nil {
+			response.Diagnostics.AddError("Invalid access JSON", err.Error())
+			return
+		}
+		options = append(options, flespi_token.WithAccess(access))
 	}
 
 	tokenInstance, err := p.client.Create(data.Info.ValueString(), options...)
@@ -195,7 +213,11 @@ func (p *platformTokenResource) Update(ctx context.Context, request resource.Upd
 		return
 	}
 
-	token := p.convertResourceModelToFlespiToken(plan)
+	token, diags := p.convertResourceModelToFlespiToken(plan)
+	response.Diagnostics.Append(diags...)
+	if response.Diagnostics.HasError() {
+		return
+	}
 
 	_, err := p.client.Update(token)
 
@@ -249,6 +271,7 @@ func (p *platformTokenResource) Delete(ctx context.Context, request resource.Del
 
 func (p *platformTokenResource) convertFlespiTokenToResourceModel(token *flespi_token.Token) (*tokenResourceModel, diag.Diagnostics) {
 	var result tokenResourceModel
+	var diags diag.Diagnostics
 
 	result.Id = types.Int64Value(token.Id)
 	result.Key = types.StringValue(token.Key)
@@ -262,14 +285,26 @@ func (p *platformTokenResource) convertFlespiTokenToResourceModel(token *flespi_
 	for key, value := range token.Metadata {
 		metadata[key] = types.StringValue(value)
 	}
-
-	meta, diags := types.MapValue(types.StringType, metadata)
+	meta, metaDiags := types.MapValue(types.StringType, metadata)
+	diags.Append(metaDiags...)
 	result.Metadata = meta
+
+	if token.Access != nil {
+		b, err := json.Marshal(token.Access)
+		if err != nil {
+			diags.AddError("Failed to serialize token access", err.Error())
+		} else {
+			result.Access = jsontypes.NewNormalizedValue(string(b))
+		}
+	} else {
+		result.Access = jsontypes.NewNormalizedNull()
+	}
 
 	return &result, diags
 }
 
-func (p *platformTokenResource) convertResourceModelToFlespiToken(data tokenResourceModel) flespi_token.Token {
+func (p *platformTokenResource) convertResourceModelToFlespiToken(data tokenResourceModel) (flespi_token.Token, diag.Diagnostics) {
+	var diags diag.Diagnostics
 	metadata := make(map[string]string)
 
 	if !data.Metadata.IsNull() {
@@ -280,7 +315,7 @@ func (p *platformTokenResource) convertResourceModelToFlespiToken(data tokenReso
 		}
 	}
 
-	return flespi_token.Token{
+	token := flespi_token.Token{
 		Id:        data.Id.ValueInt64(),
 		Key:       data.Key.ValueString(),
 		Info:      data.Info.ValueString(),
@@ -290,4 +325,15 @@ func (p *platformTokenResource) convertResourceModelToFlespiToken(data tokenReso
 		AccountId: data.AccountId.ValueInt64(),
 		Metadata:  metadata,
 	}
+
+	if !data.Access.IsNull() && !data.Access.IsUnknown() {
+		var access flespi_token.TokenAccess
+		if err := json.Unmarshal([]byte(data.Access.ValueString()), &access); err != nil {
+			diags.AddError("Invalid access JSON", err.Error())
+		} else {
+			token.Access = &access
+		}
+	}
+
+	return token, diags
 }
