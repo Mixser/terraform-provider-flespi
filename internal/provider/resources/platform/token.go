@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/mixser/flespi-client"
+	flespi "github.com/mixser/flespi-client"
 	flespi_token "github.com/mixser/flespi-client/resources/gateway/token"
 )
 
@@ -22,7 +22,7 @@ var (
 )
 
 type platformTokenResource struct {
-	client *flespi.Client
+	client *flespi_token.TokenClient
 }
 
 type tokenResourceModel struct {
@@ -59,7 +59,7 @@ func (p *platformTokenResource) Configure(ctx context.Context, request resource.
 		return
 	}
 
-	p.client = client
+	p.client = client.Tokens
 }
 
 func (p *platformTokenResource) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -128,11 +128,7 @@ func (p *platformTokenResource) Create(ctx context.Context, request resource.Cre
 		options = append(options, flespi_token.WithTTL(data.TTL.ValueInt64()))
 	}
 
-	tokenInstance, err := flespi_token.NewToken(
-		p.client,
-		data.Info.ValueString(),
-		options...,
-	)
+	tokenInstance, err := p.client.Create(data.Info.ValueString(), options...)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -158,7 +154,7 @@ func (p *platformTokenResource) Read(ctx context.Context, request resource.ReadR
 		return
 	}
 
-	token, err := flespi_token.GetToken(p.client, state.Id.ValueInt64())
+	token, err := p.client.Get(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -191,7 +187,7 @@ func (p *platformTokenResource) Update(ctx context.Context, request resource.Upd
 
 	token := p.convertResourceModelToFlespiToken(plan)
 
-	_, err := flespi_token.UpdateToken(p.client, token)
+	_, err := p.client.Update(token)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -201,7 +197,7 @@ func (p *platformTokenResource) Update(ctx context.Context, request resource.Upd
 		return
 	}
 
-	updatedToken, err := flespi_token.GetToken(p.client, plan.Id.ValueInt64())
+	updatedToken, err := p.client.Get(plan.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -230,7 +226,7 @@ func (p *platformTokenResource) Delete(ctx context.Context, request resource.Del
 		return
 	}
 
-	err := flespi_token.DeleteTokenById(p.client, state.Id.ValueInt64())
+	err := p.client.DeleteById(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(

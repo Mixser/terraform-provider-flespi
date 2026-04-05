@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/mixser/flespi-client"
+	flespi "github.com/mixser/flespi-client"
 	flespi_subaccount "github.com/mixser/flespi-client/resources/platform/subaccount"
 )
 
@@ -22,7 +22,7 @@ func NewSubaccountResource() resource.Resource {
 }
 
 type platformSubaccountResource struct {
-	client *flespi.Client
+	client *flespi_subaccount.SubaccountClient
 }
 
 type subaccountResourceModel struct {
@@ -45,7 +45,7 @@ func (p *platformSubaccountResource) Configure(ctx context.Context, request reso
 		return
 	}
 
-	p.client = client
+	p.client = client.Subaccounts
 }
 
 func (p *platformSubaccountResource) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -80,8 +80,7 @@ func (p *platformSubaccountResource) Create(ctx context.Context, request resourc
 		return
 	}
 
-	subaccountInstatnce, err := flespi_subaccount.NewSubaccount(
-		p.client,
+	subaccountInstatnce, err := p.client.Create(
 		data.Name.ValueString(),
 		flespi_subaccount.WithLimit(data.LimitId.ValueInt64()),
 	)
@@ -110,7 +109,7 @@ func (p *platformSubaccountResource) Read(ctx context.Context, request resource.
 		return
 	}
 
-	subaccount, err := flespi_subaccount.GetSubaccount(p.client, state.Id.ValueInt64())
+	subaccount, err := p.client.Get(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -144,7 +143,7 @@ func (p *platformSubaccountResource) Update(ctx context.Context, request resourc
 
 	subaccount := p.convertResourceModelToFlespiSubaccount(plan)
 
-	_, err := flespi_subaccount.UpdateSubaccount(p.client, subaccount)
+	_, err := p.client.Update(subaccount)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -154,7 +153,7 @@ func (p *platformSubaccountResource) Update(ctx context.Context, request resourc
 		return
 	}
 
-	updatedSubaccount, err := flespi_subaccount.GetSubaccount(p.client, plan.Id.ValueInt64())
+	updatedSubaccount, err := p.client.Get(plan.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -182,7 +181,7 @@ func (p *platformSubaccountResource) Delete(ctx context.Context, request resourc
 		return
 	}
 
-	err := flespi_subaccount.DeleteSubaccountById(p.client, state.Id.ValueInt64())
+	err := p.client.DeleteById(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(

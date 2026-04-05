@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/mixser/flespi-client"
+	flespi "github.com/mixser/flespi-client"
 	flespi_geofence "github.com/mixser/flespi-client/resources/gateway/geofence"
 )
 
@@ -20,7 +20,7 @@ var (
 )
 
 type gwGeofenceResource struct {
-	client *flespi.Client
+	client *flespi_geofence.GeofenceClient
 }
 
 type geofenceResourceModel struct {
@@ -81,7 +81,7 @@ func (g *gwGeofenceResource) Configure(ctx context.Context, req resource.Configu
 		return
 	}
 
-	g.client = client
+	g.client = client.Geofences
 }
 
 func (g *gwGeofenceResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) {
@@ -100,8 +100,7 @@ func (g *gwGeofenceResource) Create(ctx context.Context, request resource.Create
 		return
 	}
 
-	geofenceInstance, err := flespi_geofence.NewGeofence(
-		g.client,
+	geofenceInstance, err := g.client.Create(
 		instance.Name,
 		flespi_geofence.WithStatus(instance.Enabled),
 		flespi_geofence.WithPriority(instance.Priority),
@@ -131,7 +130,7 @@ func (g *gwGeofenceResource) Read(ctx context.Context, request resource.ReadRequ
 		return
 	}
 
-	geofences, err := flespi_geofence.ListGeofences(g.client)
+	geofences, err := g.client.List()
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -180,7 +179,7 @@ func (g *gwGeofenceResource) Update(ctx context.Context, request resource.Update
 		return
 	}
 
-	_, err := flespi_geofence.UpdateGeofence(g.client, instance)
+	_, err := g.client.Update(instance)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -191,7 +190,7 @@ func (g *gwGeofenceResource) Update(ctx context.Context, request resource.Update
 	}
 
 	// Re-read to get updated state
-	geofences, err := flespi_geofence.ListGeofences(g.client)
+	geofences, err := g.client.List()
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -232,7 +231,7 @@ func (g *gwGeofenceResource) Delete(ctx context.Context, request resource.Delete
 		return
 	}
 
-	err := flespi_geofence.DeleteGeofenceById(g.client, data.ID.ValueInt64())
+	err := g.client.DeleteById(data.ID.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(

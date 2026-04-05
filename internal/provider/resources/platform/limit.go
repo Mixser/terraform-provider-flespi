@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/mixser/flespi-client"
+	flespi "github.com/mixser/flespi-client"
 	flespi_limit "github.com/mixser/flespi-client/resources/platform/limit"
 )
 
@@ -24,7 +24,7 @@ func NewLimitResource() resource.Resource {
 }
 
 type platformLimitResource struct {
-	client *flespi.Client
+	client *flespi_limit.LimitClient
 }
 
 type limitResourceModel struct {
@@ -113,7 +113,7 @@ func (p *platformLimitResource) Configure(_ context.Context, req resource.Config
 		return
 	}
 
-	p.client = client
+	p.client = client.Limits
 }
 
 func (p *platformLimitResource) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -372,8 +372,7 @@ func (p *platformLimitResource) Create(ctx context.Context, request resource.Cre
 
 	instance := p.convertResourceModelToFlespiLimit(*data)
 
-	limitInstance, err := flespi_limit.NewLimit(
-		p.client,
+	limitInstance, err := p.client.Create(
 		instance.Name,
 		flespi_limit.WithDescription(instance.Description),
 		flespi_limit.WithBlockingDurationLimit(instance.BlockingDuration),
@@ -448,7 +447,7 @@ func (p *platformLimitResource) Read(ctx context.Context, request resource.ReadR
 		return
 	}
 
-	limit, err := flespi_limit.GetLimit(p.client, state.Id.ValueInt64())
+	limit, err := p.client.Get(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -481,7 +480,7 @@ func (p *platformLimitResource) Update(ctx context.Context, request resource.Upd
 
 	var limit = p.convertResourceModelToFlespiLimit(plan)
 
-	_, err := flespi_limit.UpdateLimit(p.client, limit)
+	_, err := p.client.Update(limit)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -491,7 +490,7 @@ func (p *platformLimitResource) Update(ctx context.Context, request resource.Upd
 		return
 	}
 
-	updatedLimit, err := flespi_limit.GetLimit(p.client, plan.Id.ValueInt64())
+	updatedLimit, err := p.client.Get(plan.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -520,7 +519,7 @@ func (p *platformLimitResource) Delete(ctx context.Context, request resource.Del
 		return
 	}
 
-	err := flespi_limit.DeleteLimitById(p.client, state.Id.ValueInt64())
+	err := p.client.DeleteById(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(

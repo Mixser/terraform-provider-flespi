@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/mixser/flespi-client"
+	flespi "github.com/mixser/flespi-client"
 	flespi_device "github.com/mixser/flespi-client/resources/gateway/device"
 )
 
@@ -23,7 +23,7 @@ var (
 )
 
 type gwDeviceResource struct {
-	client *flespi.Client
+	client *flespi_device.DeviceClient
 }
 
 func NewDeviceResource() resource.Resource {
@@ -69,7 +69,7 @@ func (g *gwDeviceResource) Configure(ctx context.Context, request resource.Confi
 		return
 	}
 
-	g.client = client
+	g.client = client.Devices
 }
 
 func (g *gwDeviceResource) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -130,8 +130,7 @@ func (g *gwDeviceResource) Create(ctx context.Context, request resource.CreateRe
 
 	instance := g.convertResourceModelToFlespiDevice(ctx, *data)
 
-	deviceInstance, err := flespi_device.NewDevice(
-		g.client,
+	deviceInstance, err := g.client.Create(
 		instance.Name,
 		instance.Enabled,
 		instance.DeviceTypeId,
@@ -148,10 +147,7 @@ func (g *gwDeviceResource) Create(ctx context.Context, request resource.CreateRe
 		return
 	}
 
-	deviceInstance, err = flespi_device.GetDevice(
-		g.client,
-		deviceInstance.Id,
-	)
+	deviceInstance, err = g.client.Get(deviceInstance.Id)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -178,7 +174,7 @@ func (g *gwDeviceResource) Read(ctx context.Context, request resource.ReadReques
 		return
 	}
 
-	device, err := flespi_device.GetDevice(g.client, state.Id.ValueInt64())
+	device, err := g.client.Get(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -208,7 +204,7 @@ func (g *gwDeviceResource) Update(ctx context.Context, request resource.UpdateRe
 
 	var device = g.convertResourceModelToFlespiDevice(ctx, state)
 
-	_, err := flespi_device.UpdateDevice(g.client, device)
+	_, err := g.client.Update(device)
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -218,7 +214,7 @@ func (g *gwDeviceResource) Update(ctx context.Context, request resource.UpdateRe
 		return
 	}
 
-	updatedDevice, err := flespi_device.GetDevice(g.client, state.Id.ValueInt64())
+	updatedDevice, err := g.client.Get(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -244,7 +240,7 @@ func (g *gwDeviceResource) Delete(ctx context.Context, request resource.DeleteRe
 		return
 	}
 
-	err := flespi_device.DeleteDeviceById(g.client, state.Id.ValueInt64())
+	err := g.client.DeleteById(state.Id.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
