@@ -22,6 +22,7 @@ description: |-
 
 ### Optional
 
+- `account_id` (Number) Account ID
 - `expire` (Number) Token expiration timestamp
 - `metadata` (Map of String) Token metadata
 - `ttl` (Number) Token TTL in seconds
