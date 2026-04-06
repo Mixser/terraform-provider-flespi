@@ -30,7 +30,8 @@ type geofenceResourceModel struct {
 	Enabled  types.Bool  `tfsdk:"enabled"`
 	Priority types.Int64 `tfsdk:"priority"`
 
-	Geometry jsontypes.Normalized `tfsdk:"geometry"`
+	Geometry  jsontypes.Normalized `tfsdk:"geometry"`
+	AccountId types.Int64          `tfsdk:"account_id"`
 }
 
 func NewGeofenceResource() resource.Resource {
@@ -62,6 +63,11 @@ func (g *gwGeofenceResource) Schema(ctx context.Context, req resource.SchemaRequ
 				CustomType:  jsontypes.NormalizedType{},
 				Required:    true,
 				Description: "GeoJSON geometry (circle, polygon, or corridor)",
+			},
+			"account_id": schema.Int64Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Subaccount ID to create the geofence under.",
 			},
 		},
 	}
@@ -100,11 +106,16 @@ func (g *gwGeofenceResource) Create(ctx context.Context, request resource.Create
 		return
 	}
 
-	geofenceInstance, err := g.client.Create(
-		instance.Name,
+	createOpts := []flespi_geofence.CreateGeofenceOption{
 		flespi_geofence.WithStatus(instance.Enabled),
 		flespi_geofence.WithPriority(instance.Priority),
 		flespi_geofence.WithGeometry(instance.Geometry),
+		flespi_geofence.WithAccountId(instance.AccountId),
+	}
+
+	geofenceInstance, err := g.client.Create(
+		instance.Name,
+		createOpts...,
 	)
 
 	if err != nil {
@@ -130,49 +141,36 @@ func (g *gwGeofenceResource) Read(ctx context.Context, request resource.ReadRequ
 		return
 	}
 
-	geofences, err := g.client.List()
+	geofenceInstance, err := g.client.GetById(data.ID.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
-			"Failed to read geofences",
-			fmt.Sprintf("Error reading geofences: %s", err),
+			"Failed to read geofence",
+			fmt.Sprintf("Error reading geofence: %s", err),
 		)
 		return
 	}
 
-	// Find the geofence by ID
-	var foundGeofence *flespi_geofence.Geofence
-	for _, gf := range geofences {
-		if gf.Id == data.ID.ValueInt64() {
-			foundGeofence = &gf
-			break
-		}
-	}
-
-	if foundGeofence == nil {
-		response.Diagnostics.AddError(
-			"Geofence not found",
-			fmt.Sprintf("Geofence with ID %d not found", data.ID.ValueInt64()),
-		)
-		return
-	}
-
-	result, diags := g.convertFlespiGeofenceToResourceModel(*foundGeofence)
+	result, diags := g.convertFlespiGeofenceToResourceModel(*geofenceInstance)
 
 	response.Diagnostics.Append(diags)
 	response.Diagnostics.Append(response.State.Set(ctx, &result)...)
 }
 
 func (g *gwGeofenceResource) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	var data *geofenceResourceModel
+	var plan geofenceResourceModel
+	var state geofenceResourceModel
 
-	response.Diagnostics.Append(request.Plan.Get(ctx, &data)...)
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
 
 	if response.Diagnostics.HasError() {
 		return
 	}
 
-	instance, diags := g.convertResourceModelToFlespiGeofence(*data)
+	plan.ID = state.ID
+
+	instance, diags := g.convertResourceModelToFlespiGeofence(plan)
 
 	if diags != nil {
 		response.Diagnostics.Append(diags)
@@ -189,8 +187,7 @@ func (g *gwGeofenceResource) Update(ctx context.Context, request resource.Update
 		return
 	}
 
-	// Re-read to get updated state
-	geofences, err := g.client.List()
+	updatedGeofence, err := g.client.GetById(state.ID.ValueInt64())
 
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -200,23 +197,7 @@ func (g *gwGeofenceResource) Update(ctx context.Context, request resource.Update
 		return
 	}
 
-	var foundGeofence *flespi_geofence.Geofence
-	for _, gf := range geofences {
-		if gf.Id == data.ID.ValueInt64() {
-			foundGeofence = &gf
-			break
-		}
-	}
-
-	if foundGeofence == nil {
-		response.Diagnostics.AddError(
-			"Geofence not found after update",
-			fmt.Sprintf("Geofence with ID %d not found", data.ID.ValueInt64()),
-		)
-		return
-	}
-
-	result, diags := g.convertFlespiGeofenceToResourceModel(*foundGeofence)
+	result, diags := g.convertFlespiGeofenceToResourceModel(*updatedGeofence)
 
 	response.Diagnostics.Append(diags)
 	response.Diagnostics.Append(response.State.Set(ctx, &result)...)
@@ -271,11 +252,12 @@ func (g *gwGeofenceResource) convertResourceModelToFlespiGeofence(data geofenceR
 	}
 
 	return flespi_geofence.Geofence{
-		Id:       data.ID.ValueInt64(),
-		Name:     data.Name.ValueString(),
-		Enabled:  data.Enabled.ValueBool(),
-		Priority: data.Priority.ValueInt64(),
-		Geometry: geometry,
+		Id:        data.ID.ValueInt64(),
+		Name:      data.Name.ValueString(),
+		Enabled:   data.Enabled.ValueBool(),
+		Priority:  data.Priority.ValueInt64(),
+		Geometry:  geometry,
+		AccountId: data.AccountId.ValueInt64(),
 	}, nil
 }
 
@@ -300,6 +282,8 @@ func (g *gwGeofenceResource) convertFlespiGeofenceToResourceModel(data flespi_ge
 	} else {
 		result.Geometry = jsontypes.NewNormalizedNull()
 	}
+
+	result.AccountId = types.Int64Value(data.AccountId)
 
 	return &result, nil
 }

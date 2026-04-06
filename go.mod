@@ -7,7 +7,7 @@ require (
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
 	github.com/hashicorp/terraform-plugin-framework-jsontypes v0.2.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
-	github.com/mixser/flespi-client v0.4.3
+	github.com/mixser/flespi-client v0.4.4
 )
 
 require (
