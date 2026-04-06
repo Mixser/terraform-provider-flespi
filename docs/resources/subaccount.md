@@ -20,6 +20,10 @@ description: |-
 - `limit_id` (Number)
 - `name` (String)
 
+### Optional
+
+- `account_id` (Number) Subaccount ID to create the limit under.
+
 ### Read-Only
 
 - `id` (Number) The ID of this resource.

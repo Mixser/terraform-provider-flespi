@@ -21,6 +21,7 @@ description: |-
 
 ### Optional
 
+- `account_id` (Number) Subaccount ID to create the limit under.
 - `api_calls` (Number)
 - `api_traffic` (Number)
 - `blocking_duration` (Number)

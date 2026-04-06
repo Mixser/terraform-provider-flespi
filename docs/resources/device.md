@@ -23,6 +23,7 @@ description: |-
 
 ### Optional
 
+- `account_id` (Number) Subaccount ID to create the device under.
 - `configuration` (Map of String)
 - `media_rotate` (Number)
 - `media_ttl` (Number)
