@@ -22,7 +22,8 @@ description: |-
 
 ### Optional
 
-- `configuration` (String)
+- `account_id` (Number) Subaccount ID to create the channel under. Passed via x-flespi-cid header, not stored in the channel itself.
+- `configuration` (String) Protocol-specific configuration parameters as JSON. The available fields depend on the protocol; retrieve the schema with GET /gw/channel-protocols/{protocol_id}. Use jsonencode() in HCL.
 - `messages_ttl` (Number)
 - `metadata` (Map of String)
 - `protocol_id` (Number)
