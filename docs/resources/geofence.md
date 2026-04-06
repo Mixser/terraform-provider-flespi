@@ -22,6 +22,7 @@ description: |-
 
 ### Optional
 
+- `account_id` (Number) Subaccount ID to create the geofence under.
 - `enabled` (Boolean)
 - `priority` (Number)
 

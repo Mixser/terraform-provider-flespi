@@ -80,7 +80,7 @@ func (g *gwChannelResource) Schema(ctx context.Context, request resource.SchemaR
 			"account_id": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "Subaccount ID to create the channel under. Passed via x-flespi-cid header, not stored in the channel itself.",
+				Description: "Subaccount ID to create the channel under.",
 			},
 		},
 	}

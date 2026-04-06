@@ -46,7 +46,7 @@ type deviceResourceModel struct {
 	MediaTTL    types.Int64 `tfsdk:"media_ttl"`
 	MediaRotate types.Int64 `tfsdk:"media_rotate"`
 
-	// Metadata types.[string]string `json:"metadata,omitempty"`
+	AccountId types.Int64 `tfsdk:"account_id"`
 }
 
 func (g *gwDeviceResource) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -115,6 +115,11 @@ func (g *gwDeviceResource) Schema(ctx context.Context, request resource.SchemaRe
 				Computed:    true,
 				ElementType: types.StringType,
 			},
+			"account_id": schema.Int64Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Subaccount ID to create the device under.",
+			},
 		},
 	}
 }
@@ -130,13 +135,18 @@ func (g *gwDeviceResource) Create(ctx context.Context, request resource.CreateRe
 
 	instance := g.convertResourceModelToFlespiDevice(ctx, *data)
 
+	createOpts := []flespi_device.CreateDeviceOption{
+		flespi_device.WithMessage(instance.MessagesTTL, instance.MessagesRotate),
+		flespi_device.WithMedia(instance.MediaTTL, instance.MediaRotate),
+		flespi_device.WithConfiguration(instance.Configuration),
+		flespi_device.WithAccountId(instance.AccountId),
+	}
+
 	deviceInstance, err := g.client.Create(
 		instance.Name,
 		instance.Enabled,
 		instance.DeviceTypeId,
-		flespi_device.WithMessage(instance.MessagesTTL, instance.MessagesRotate),
-		flespi_device.WithMedia(instance.MediaTTL, instance.MediaRotate),
-		flespi_device.WithConfiguration(instance.Configuration),
+		createOpts...,
 	)
 
 	if err != nil {
@@ -192,17 +202,19 @@ func (g *gwDeviceResource) Read(ctx context.Context, request resource.ReadReques
 }
 
 func (g *gwDeviceResource) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	var plan deviceResourceModel
 	var state deviceResourceModel
 
-	diags := request.Plan.Get(ctx, &state)
-
-	response.Diagnostics.Append(diags...)
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
 
 	if response.Diagnostics.HasError() {
 		return
 	}
 
-	var device = g.convertResourceModelToFlespiDevice(ctx, state)
+	plan.Id = state.Id
+
+	var device = g.convertResourceModelToFlespiDevice(ctx, plan)
 
 	_, err := g.client.Update(device)
 
@@ -273,6 +285,7 @@ func (g *gwDeviceResource) convertResourceModelToFlespiDevice(ctx context.Contex
 		MediaRotate:    data.MediaRotate.ValueInt64(),
 		Configuration:  configuration,
 		Metadata:       map[string]string{},
+		AccountId:      data.AccountId.ValueInt64(),
 	}
 }
 
@@ -299,6 +312,8 @@ func (g *gwDeviceResource) convertFlespiDeviceToResourceModel(device *flespi_dev
 
 	cfg, diags := types.MapValue(types.StringType, configuration)
 	state.Configuration = cfg
+
+	state.AccountId = types.Int64Value(device.AccountId)
 
 	return &state, diags
 }

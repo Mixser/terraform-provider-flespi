@@ -3,6 +3,7 @@ package platform
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
@@ -91,6 +92,8 @@ type limitResourceModel struct {
 	GrantsCount types.Int64 `tfsdk:"grants_count"`
 
 	IdentityProvidersCount types.Int64 `tfsdk:"identity_providers_count"`
+
+	AccountId types.Int64 `tfsdk:"account_id"`
 }
 
 func (p *platformLimitResource) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -357,6 +360,11 @@ func (p *platformLimitResource) Schema(ctx context.Context, request resource.Sch
 				Computed: true,
 				Default:  int64default.StaticInt64(-1),
 			},
+			"account_id": schema.Int64Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Subaccount ID to create the limit under.",
+			},
 		},
 	}
 }
@@ -372,8 +380,7 @@ func (p *platformLimitResource) Create(ctx context.Context, request resource.Cre
 
 	instance := p.convertResourceModelToFlespiLimit(*data)
 
-	limitInstance, err := p.client.Create(
-		instance.Name,
+	createOpts := []flespi_limit.CreateLimitOption{
 		flespi_limit.WithDescription(instance.Description),
 		flespi_limit.WithBlockingDurationLimit(instance.BlockingDuration),
 		flespi_limit.WithApiLimit(instance.ApiCall, instance.ApiTraffic),
@@ -422,6 +429,12 @@ func (p *platformLimitResource) Create(ctx context.Context, request resource.Cre
 		flespi_limit.WithWebhookLimit(instance.WebhooksCount, instance.WebhookStorage, instance.WebhookTraffic),
 		flespi_limit.WithGrantLimit(instance.GrantsCount),
 		flespi_limit.WithIdentityProviderLimit(instance.IdentityProvidersCount),
+		flespi_limit.WithAccountId(instance.AccountId),
+	}
+
+	limitInstance, err := p.client.Create(
+		instance.Name,
+		createOpts...,
 	)
 
 	if err != nil {

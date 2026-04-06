@@ -35,8 +35,9 @@ type streamResourceModel struct {
 
 	ValidateMessage types.String `tfsdk:"validate_message"`
 
-	Configuration types.Map `tfsdk:"configuration"`
-	Metadata      types.Map `tfsdk:"metadata"`
+	Configuration types.Map   `tfsdk:"configuration"`
+	Metadata      types.Map   `tfsdk:"metadata"`
+	AccountId     types.Int64 `tfsdk:"account_id"`
 }
 
 func NewStreamResource() resource.Resource {
@@ -110,6 +111,11 @@ func (g *gwStreamResource) Schema(ctx context.Context, request resource.SchemaRe
 				ElementType: types.StringType,
 				Description: "Stream metadata",
 			},
+			"account_id": schema.Int64Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Subaccount ID to create the stream under.",
+			},
 		},
 	}
 }
@@ -125,14 +131,19 @@ func (g *gwStreamResource) Create(ctx context.Context, request resource.CreateRe
 
 	instance := g.convertResourceModelToFlespiStream(ctx, *data)
 
-	streamInstance, err := g.client.Create(
-		instance.Name,
-		instance.ProtocolId,
+	createOpts := []flespi_stream.CreateStreamOption{
 		flespi_stream.WithStatus(instance.Enabled),
 		flespi_stream.WithQueueTTL(instance.QueueTTL),
 		flespi_stream.WithValidateMessage(instance.ValidateMessage),
 		flespi_stream.WithConfiguration(instance.Configuration),
 		flespi_stream.WithMetadata(instance.Metadata),
+		flespi_stream.WithAccountId(instance.AccountId),
+	}
+
+	streamInstance, err := g.client.Create(
+		instance.Name,
+		instance.ProtocolId,
+		createOpts...,
 	)
 
 	if err != nil {
@@ -187,17 +198,19 @@ func (g *gwStreamResource) Read(ctx context.Context, request resource.ReadReques
 }
 
 func (g *gwStreamResource) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	var plan streamResourceModel
 	var state streamResourceModel
 
-	diags := request.Plan.Get(ctx, &state)
-
-	response.Diagnostics.Append(diags...)
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
 
 	if response.Diagnostics.HasError() {
 		return
 	}
 
-	var stream = g.convertResourceModelToFlespiStream(ctx, state)
+	plan.Id = state.Id
+
+	var stream = g.convertResourceModelToFlespiStream(ctx, plan)
 
 	_, err := g.client.Update(stream)
 
@@ -267,6 +280,7 @@ func (g *gwStreamResource) convertResourceModelToFlespiStream(ctx context.Contex
 		ValidateMessage: data.ValidateMessage.ValueString(),
 		Configuration:   configuration,
 		Metadata:        metadata,
+		AccountId:       data.AccountId.ValueInt64(),
 	}
 }
 
@@ -296,6 +310,8 @@ func (g *gwStreamResource) convertFlespiStreamToResourceModel(stream *flespi_str
 	meta, metaDiags := types.MapValue(types.StringType, metadata)
 	diags.Append(metaDiags...)
 	state.Metadata = meta
+
+	state.AccountId = types.Int64Value(stream.AccountId)
 
 	return &state, diags
 }

@@ -23,6 +23,7 @@ description: |-
 
 ### Optional
 
+- `account_id` (Number) Subaccount ID to create the stream under.
 - `configuration` (Map of String) Stream configuration
 - `metadata` (Map of String) Stream metadata
 - `queue_ttl` (Number) Queue TTL in seconds

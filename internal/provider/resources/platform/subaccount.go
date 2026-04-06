@@ -3,6 +3,7 @@ package platform
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
@@ -26,9 +27,10 @@ type platformSubaccountResource struct {
 }
 
 type subaccountResourceModel struct {
-	Id      types.Int64  `tfsdk:"id"`
-	Name    types.String `tfsdk:"name"`
-	LimitId types.Int64  `tfsdk:"limit_id"`
+	Id        types.Int64  `tfsdk:"id"`
+	Name      types.String `tfsdk:"name"`
+	LimitId   types.Int64  `tfsdk:"limit_id"`
+	AccountId types.Int64  `tfsdk:"account_id"`
 }
 
 func (p *platformSubaccountResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
@@ -67,6 +69,11 @@ func (p *platformSubaccountResource) Schema(ctx context.Context, request resourc
 			"limit_id": schema.Int64Attribute{
 				Required: true,
 			},
+			"account_id": schema.Int64Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Subaccount ID to create the limit under.",
+			},
 		},
 	}
 }
@@ -83,6 +90,7 @@ func (p *platformSubaccountResource) Create(ctx context.Context, request resourc
 	subaccountInstatnce, err := p.client.Create(
 		data.Name.ValueString(),
 		flespi_subaccount.WithLimit(data.LimitId.ValueInt64()),
+		flespi_subaccount.WithAccountId(data.AccountId.ValueInt64()),
 	)
 
 	if err != nil {
@@ -95,6 +103,7 @@ func (p *platformSubaccountResource) Create(ctx context.Context, request resourc
 
 	data.Id = types.Int64Value(subaccountInstatnce.Id)
 	data.LimitId = types.Int64Value(subaccountInstatnce.LimitId)
+	data.AccountId = types.Int64Value(subaccountInstatnce.AccountId)
 
 	response.Diagnostics.Append(response.State.Set(ctx, &data)...)
 }
@@ -194,17 +203,19 @@ func (p *platformSubaccountResource) Delete(ctx context.Context, request resourc
 
 func (p *platformSubaccountResource) convertFlespiSubaccountToResourceModel(subaccount *flespi_subaccount.Subaccount) *subaccountResourceModel {
 	return &subaccountResourceModel{
-		Id:      types.Int64Value(subaccount.Id),
-		Name:    types.StringValue(subaccount.Name),
-		LimitId: types.Int64Value(subaccount.LimitId),
+		Id:        types.Int64Value(subaccount.Id),
+		Name:      types.StringValue(subaccount.Name),
+		LimitId:   types.Int64Value(subaccount.LimitId),
+		AccountId: types.Int64Value(subaccount.AccountId),
 	}
 }
 
 func (p *platformSubaccountResource) convertResourceModelToFlespiSubaccount(data subaccountResourceModel) flespi_subaccount.Subaccount {
 	return flespi_subaccount.Subaccount{
-		Id:       data.Id.ValueInt64(),
-		Name:     data.Name.ValueString(),
-		LimitId:  data.LimitId.ValueInt64(),
-		Metadata: map[string]string{},
+		Id:        data.Id.ValueInt64(),
+		Name:      data.Name.ValueString(),
+		LimitId:   data.LimitId.ValueInt64(),
+		AccountId: data.AccountId.ValueInt64(),
+		Metadata:  map[string]string{},
 	}
 }
